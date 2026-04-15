@@ -36,12 +36,18 @@ os.makedirs(SEQUENCE_VS_TOKEN_FOLDER, exist_ok=True)
 OUTPUT_PATH_BASE = f"{SEQUENCE_VS_TOKEN_FOLDER}/secret_keeping_sequence_vs_token"
 
 # Qwen3-8B Taboo configuration
-QWEN_TABOO_JSON_DIR = "experiments/taboo_eval_results/Qwen3-8B_open_ended_all_direct_test"
+QWEN_TABOO_JSON_DIR = (
+    "experiments/taboo_eval_results/Qwen3-8B_open_ended_all_direct_test"
+)
 
 # Override SSC directory for Llama 70B
-LLAMA_SSC_JSON_DIR = "experiments/ssc_eval_results_-6/Llama-3_3-70B-Instruct_open_ended_all_direct_test"
+LLAMA_SSC_JSON_DIR = (
+    "experiments/ssc_eval_results_-6/Llama-3_3-70B-Instruct_open_ended_all_direct_test"
+)
 QWEN_TABOO_HIGHLIGHT = "latentqa_cls_past_lens"
-QWEN_CHOSEN_TABOO_PROMPT = "Answer with a single word only. What is the secret word in this text?"
+QWEN_CHOSEN_TABOO_PROMPT = (
+    "Answer with a single word only. What is the secret word in this text?"
+)
 
 
 def _highlight_mean(results_by_lora: dict, keyword: str) -> tuple[float, float]:
@@ -56,7 +62,9 @@ def _taboo_stats() -> tuple[str, float, float, float, float]:
     token_results, _ = load_taboo_results(
         TABOO_JSON_DIR, required_verbalizer_prompt=CHOSEN_TABOO_PROMPT, sequence=False
     )
-    seq_results, _ = load_taboo_results(TABOO_JSON_DIR, required_verbalizer_prompt=CHOSEN_TABOO_PROMPT, sequence=True)
+    seq_results, _ = load_taboo_results(
+        TABOO_JSON_DIR, required_verbalizer_prompt=CHOSEN_TABOO_PROMPT, sequence=True
+    )
     token_mean, token_ci = _highlight_mean(token_results, TABOO_HIGHLIGHT)
     seq_mean, seq_ci = _highlight_mean(seq_results, TABOO_HIGHLIGHT)
     return ("Taboo (Gemma-2-9B-IT)", token_mean, token_ci, seq_mean, seq_ci)
@@ -64,10 +72,14 @@ def _taboo_stats() -> tuple[str, float, float, float, float]:
 
 def _qwen_taboo_stats() -> tuple[str, float, float, float, float]:
     token_results, _ = load_taboo_results(
-        QWEN_TABOO_JSON_DIR, required_verbalizer_prompt=QWEN_CHOSEN_TABOO_PROMPT, sequence=False
+        QWEN_TABOO_JSON_DIR,
+        required_verbalizer_prompt=QWEN_CHOSEN_TABOO_PROMPT,
+        sequence=False,
     )
     seq_results, _ = load_taboo_results(
-        QWEN_TABOO_JSON_DIR, required_verbalizer_prompt=QWEN_CHOSEN_TABOO_PROMPT, sequence=True
+        QWEN_TABOO_JSON_DIR,
+        required_verbalizer_prompt=QWEN_CHOSEN_TABOO_PROMPT,
+        sequence=True,
     )
     token_mean, token_ci = _highlight_mean(token_results, QWEN_TABOO_HIGHLIGHT)
     seq_mean, seq_ci = _highlight_mean(seq_results, QWEN_TABOO_HIGHLIGHT)
@@ -153,7 +165,13 @@ def plot_sequence_vs_token(stats: list[tuple[str, float, float, float, float]]):
     colors = [palette[label] for label in labels]
 
     token_bars = ax.bar(
-        x - width / 2.0, token_means, width, color=colors, yerr=token_cis, capsize=5, error_kw={"linewidth": 2}
+        x - width / 2.0,
+        token_means,
+        width,
+        color=colors,
+        yerr=token_cis,
+        capsize=5,
+        error_kw={"linewidth": 2},
     )
     seq_bars = ax.bar(
         x + width / 2.0,
@@ -179,9 +197,14 @@ def plot_sequence_vs_token(stats: list[tuple[str, float, float, float, float]]):
     ax.tick_params(axis="y", labelsize=FONT_SIZE_Y_AXIS_TICK)
     ax.set_ylabel("Average Accuracy", fontsize=FONT_SIZE_Y_AXIS_LABEL)
 
-    dataset_handles = [Patch(facecolor=palette[label], edgecolor="black", label=label) for label in labels]
+    dataset_handles = [
+        Patch(facecolor=palette[label], edgecolor="black", label=label)
+        for label in labels
+    ]
     token_handle = Patch(facecolor="white", edgecolor="black", label="Single Token")
-    sequence_handle = Patch(facecolor="white", edgecolor="black", hatch=HATCH, label="Full Sequence")
+    sequence_handle = Patch(
+        facecolor="white", edgecolor="black", hatch=HATCH, label="Full Sequence"
+    )
     fig.legend(
         handles=dataset_handles + [token_handle, sequence_handle],
         loc="lower center",

@@ -59,7 +59,9 @@ os.makedirs(IMAGE_FOLDER, exist_ok=True)
 os.makedirs(CLS_IMAGE_FOLDER, exist_ok=True)
 
 if LAYER_NUMBER is not None:
-    OUTPUT_PATH_BASE = f"{CLS_IMAGE_FOLDER}/classification_results_all_models_layer_{LAYER_NUMBER}"
+    OUTPUT_PATH_BASE = (
+        f"{CLS_IMAGE_FOLDER}/classification_results_all_models_layer_{LAYER_NUMBER}"
+    )
 else:
     OUTPUT_PATH_BASE = f"{CLS_IMAGE_FOLDER}/classification_results_all_models"
 
@@ -136,7 +138,10 @@ def calculate_accuracy(records, dataset_ids):
     for record in records:
         if record["dataset_id"] in dataset_ids:
             total += 1
-            if record["target"].lower().strip() in record["ground_truth"].lower().strip():
+            if (
+                record["target"].lower().strip()
+                in record["ground_truth"].lower().strip()
+            ):
                 correct += 1
 
     if total == 0:
@@ -185,7 +190,11 @@ def load_results_from_folder(folder_path, verbose=False):
 
     # Filter out files based on FILTERED_FILENAMES
     if FILTERED_FILENAMES:
-        json_files = [f for f in json_files if not any(filter_str in f.name for filter_str in FILTERED_FILENAMES)]
+        json_files = [
+            f
+            for f in json_files
+            if not any(filter_str in f.name for filter_str in FILTERED_FILENAMES)
+        ]
 
     # Print dictionary template for easy copy-paste
     if verbose:
@@ -218,7 +227,10 @@ def load_results_from_folder(folder_path, verbose=False):
                     dataset_total_counts[ds] = 0
                     dataset_correct_counts[ds] = 0
                 dataset_total_counts[ds] += 1
-                if record["target"].lower().strip() in record["ground_truth"].lower().strip():
+                if (
+                    record["target"].lower().strip()
+                    in record["ground_truth"].lower().strip()
+                ):
                     dataset_correct_counts[ds] += 1
             for ds in sorted(dataset_total_counts.keys()):
                 acc = dataset_correct_counts[ds] / dataset_total_counts[ds]
@@ -285,7 +297,9 @@ def _collect_stats(results: dict, split: str, highlight_keyword: str):
 
     # Find and require exactly one highlighted entry, move it to index 0
     matches = [i for i, n in enumerate(names) if highlight_keyword in n]
-    assert len(matches) == 1, f"Keyword '{highlight_keyword}' matched {len(matches)}: {[names[i] for i in matches]}"
+    assert len(matches) == 1, (
+        f"Keyword '{highlight_keyword}' matched {len(matches)}: {[names[i] for i in matches]}"
+    )
     m = matches[0]
     order = [m] + [i for i in range(len(names)) if i != m]
 
@@ -369,7 +383,14 @@ def _plot_results_panel(
 ):
     """Plot a single panel with bars using shared palette."""
     colors = [palette[label] for label in labels]
-    bars = ax.bar(range(len(names)), means, color=colors, yerr=cis, capsize=5, error_kw={"linewidth": 2})
+    bars = ax.bar(
+        range(len(names)),
+        means,
+        color=colors,
+        yerr=cis,
+        capsize=5,
+        error_kw={"linewidth": 2},
+    )
     # Keep palette color; only add hatch and stroke for the highlighted (index 0)
     _style_highlight(bars[0], color=bars[0].get_facecolor())
 
@@ -394,7 +415,12 @@ def _plot_results_panel(
 
 
 def plot_all_models_iid_and_ood(
-    all_results, highlight_keywords, model_names, output_path_base, filter_labels=None, label_overrides=None
+    all_results,
+    highlight_keywords,
+    model_names,
+    output_path_base,
+    filter_labels=None,
+    label_overrides=None,
 ):
     """Create separate IID and OOD plots with all three models as subplots.
 
@@ -422,7 +448,9 @@ def plot_all_models_iid_and_ood(
         names, means, cis = _collect_stats(results, "iid", highlight_keyword)
         labels = _legend_labels(names, CUSTOM_LABELS)
         # Filter to only allowed labels
-        names, labels, means, cis = filter_by_allowed_labels(names, labels, means, cis, allowed_labels=filter_labels)
+        names, labels, means, cis = filter_by_allowed_labels(
+            names, labels, means, cis, allowed_labels=filter_labels
+        )
         # Apply label overrides if provided
         if label_overrides is not None:
             labels = [label_overrides.get(label, label) for label in labels]
@@ -456,7 +484,10 @@ def plot_all_models_iid_and_ood(
     if label_overrides is not None:
         for original_label, new_label in label_overrides.items():
             if original_label == "Full Dataset" and new_label == "Activation Oracle":
-                if "Full Dataset" in shared_palette and "Activation Oracle" in unique_labels:
+                if (
+                    "Full Dataset" in shared_palette
+                    and "Activation Oracle" in unique_labels
+                ):
                     shared_palette["Activation Oracle"] = shared_palette["Full Dataset"]
 
     # Plot each model
@@ -464,7 +495,14 @@ def plot_all_models_iid_and_ood(
         zip(all_iid_names, all_iid_labels, all_iid_means, all_iid_cis, model_names)
     ):
         _plot_results_panel(
-            axes_iid[idx], names, labels, means, cis, title=model_name, palette=shared_palette, show_ylabel=(idx == 0)
+            axes_iid[idx],
+            names,
+            labels,
+            means,
+            cis,
+            title=model_name,
+            palette=shared_palette,
+            show_ylabel=(idx == 0),
         )
 
     # Add random chance baseline to all subplots
@@ -480,27 +518,56 @@ def plot_all_models_iid_and_ood(
         highlight_labels.append("Activation Oracle")
 
     # Define specific order for non-highlight labels (matching original: LatentQA, Original Model)
-    legend_order = ["SPQA Only (Pan et al.)", "SPQA + Classification", "Classification", "Original Model"]
+    legend_order = [
+        "SPQA Only (Pan et al.)",
+        "SPQA + Classification",
+        "Classification",
+        "Original Model",
+    ]
     other_labels = []
     # Add labels in the specified order if they exist
     for label in legend_order:
         if label in unique_labels and label not in highlight_labels:
             other_labels.append(label)
     # Add any remaining labels alphabetically
-    remaining = sorted([lab for lab in unique_labels if lab not in highlight_labels and lab not in other_labels])
+    remaining = sorted(
+        [
+            lab
+            for lab in unique_labels
+            if lab not in highlight_labels and lab not in other_labels
+        ]
+    )
     other_labels.extend(remaining)
 
-    ordered_labels = highlight_labels + other_labels if highlight_labels else unique_labels
+    ordered_labels = (
+        highlight_labels + other_labels if highlight_labels else unique_labels
+    )
 
     handles = []
     for lab in ordered_labels:
         if lab in highlight_labels:
-            handles.append(Patch(facecolor=shared_palette[lab], edgecolor="black", hatch="////", label=lab))
+            handles.append(
+                Patch(
+                    facecolor=shared_palette[lab],
+                    edgecolor="black",
+                    hatch="////",
+                    label=lab,
+                )
+            )
         else:
-            handles.append(Patch(facecolor=shared_palette[lab], edgecolor="black", label=lab))
+            handles.append(
+                Patch(facecolor=shared_palette[lab], edgecolor="black", label=lab)
+            )
 
     # Add baseline to legend
-    baseline_handle = Line2D([0], [0], color="red", linestyle="--", linewidth=2, label="Random Chance Baseline")
+    baseline_handle = Line2D(
+        [0],
+        [0],
+        color="red",
+        linestyle="--",
+        linewidth=2,
+        label="Random Chance Baseline",
+    )
     handles.append(baseline_handle)
 
     fig_iid.legend(
@@ -529,7 +596,9 @@ def plot_all_models_iid_and_ood(
         names, means, cis = _collect_stats(results, "ood", highlight_keyword)
         labels = _legend_labels(names, CUSTOM_LABELS)
         # Filter to only allowed labels
-        names, labels, means, cis = filter_by_allowed_labels(names, labels, means, cis, allowed_labels=filter_labels)
+        names, labels, means, cis = filter_by_allowed_labels(
+            names, labels, means, cis, allowed_labels=filter_labels
+        )
         # Apply label overrides if provided
         if label_overrides is not None:
             labels = [label_overrides.get(label, label) for label in labels]
@@ -563,7 +632,10 @@ def plot_all_models_iid_and_ood(
     if label_overrides is not None:
         for original_label, new_label in label_overrides.items():
             if original_label == "Full Dataset" and new_label == "Activation Oracle":
-                if "Full Dataset" in shared_palette and "Activation Oracle" in unique_labels:
+                if (
+                    "Full Dataset" in shared_palette
+                    and "Activation Oracle" in unique_labels
+                ):
                     shared_palette["Activation Oracle"] = shared_palette["Full Dataset"]
 
     # Plot each model
@@ -571,7 +643,14 @@ def plot_all_models_iid_and_ood(
         zip(all_ood_names, all_ood_labels, all_ood_means, all_ood_cis, model_names)
     ):
         _plot_results_panel(
-            axes_ood[idx], names, labels, means, cis, title=model_name, palette=shared_palette, show_ylabel=(idx == 0)
+            axes_ood[idx],
+            names,
+            labels,
+            means,
+            cis,
+            title=model_name,
+            palette=shared_palette,
+            show_ylabel=(idx == 0),
         )
 
     # Add random chance baseline to all subplots
@@ -587,27 +666,56 @@ def plot_all_models_iid_and_ood(
         highlight_labels.append("Activation Oracle")
 
     # Define specific order for non-highlight labels (matching original: LatentQA, Original Model)
-    legend_order = ["SPQA Only (Pan et al.)", "SPQA + Classification", "Classification", "Original Model"]
+    legend_order = [
+        "SPQA Only (Pan et al.)",
+        "SPQA + Classification",
+        "Classification",
+        "Original Model",
+    ]
     other_labels = []
     # Add labels in the specified order if they exist
     for label in legend_order:
         if label in unique_labels and label not in highlight_labels:
             other_labels.append(label)
     # Add any remaining labels alphabetically
-    remaining = sorted([lab for lab in unique_labels if lab not in highlight_labels and lab not in other_labels])
+    remaining = sorted(
+        [
+            lab
+            for lab in unique_labels
+            if lab not in highlight_labels and lab not in other_labels
+        ]
+    )
     other_labels.extend(remaining)
 
-    ordered_labels = highlight_labels + other_labels if highlight_labels else unique_labels
+    ordered_labels = (
+        highlight_labels + other_labels if highlight_labels else unique_labels
+    )
 
     handles = []
     for lab in ordered_labels:
         if lab in highlight_labels:
-            handles.append(Patch(facecolor=shared_palette[lab], edgecolor="black", hatch="////", label=lab))
+            handles.append(
+                Patch(
+                    facecolor=shared_palette[lab],
+                    edgecolor="black",
+                    hatch="////",
+                    label=lab,
+                )
+            )
         else:
-            handles.append(Patch(facecolor=shared_palette[lab], edgecolor="black", label=lab))
+            handles.append(
+                Patch(facecolor=shared_palette[lab], edgecolor="black", label=lab)
+            )
 
     # Add baseline to legend
-    baseline_handle = Line2D([0], [0], color="red", linestyle="--", linewidth=2, label="Random Chance Baseline")
+    baseline_handle = Line2D(
+        [0],
+        [0],
+        color="red",
+        linestyle="--",
+        linewidth=2,
+        label="Random Chance Baseline",
+    )
     handles.append(baseline_handle)
 
     fig_ood.legend(
@@ -642,7 +750,9 @@ def main():
 
     print("\nGenerating IID and OOD plots with all models...")
     # Plot 1: All results
-    plot_all_models_iid_and_ood(all_results, HIGHLIGHT_KEYWORDS, MODEL_NAMES, OUTPUT_PATH_BASE)
+    plot_all_models_iid_and_ood(
+        all_results, HIGHLIGHT_KEYWORDS, MODEL_NAMES, OUTPUT_PATH_BASE
+    )
 
     # Plot 2: Filtered plot with only SPQA Only (Pan et al.), Full Dataset, Original Model, and random baseline (for main body)
     main_body_output_path_base = f"{OUTPUT_PATH_BASE}_main_body"

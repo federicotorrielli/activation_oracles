@@ -3,7 +3,12 @@ import random
 import numpy as np
 import torch
 from peft import PeftModel
-from transformers import AutoConfig, AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
+from transformers import (
+    AutoConfig,
+    AutoModelForCausalLM,
+    AutoTokenizer,
+    BitsAndBytesConfig,
+)
 
 
 def set_seed(seed: int) -> None:
@@ -68,7 +73,9 @@ def list_decode(x: torch.Tensor, tokenizer: AutoTokenizer) -> list[list[str]]:
     return [tokenizer.batch_decode(seq, skip_special_tokens=False) for seq in token_ids]
 
 
-def get_bos_eos_pad_mask(tokenizer: AutoTokenizer, token_ids: torch.Tensor) -> torch.Tensor:
+def get_bos_eos_pad_mask(
+    tokenizer: AutoTokenizer, token_ids: torch.Tensor
+) -> torch.Tensor:
     """Create mask for BOS, EOS, and PAD tokens"""
     mask = torch.zeros_like(token_ids, dtype=torch.bool)
 

@@ -40,7 +40,10 @@ OUTPUT_PATH = f"{CLS_IMAGE_FOLDER}/patchscopes_results_{DATA_DIR}_{sequence_str}
 
 
 # Filter filenames - skip files containing any of these strings
-FILTER_FILENAMES = ["pretrain_mix", "pretrain_Qwen"]  # Add strings here to filter, e.g., ["test", "backup", "old"]
+FILTER_FILENAMES = [
+    "pretrain_mix",
+    "pretrain_Qwen",
+]  # Add strings here to filter, e.g., ["test", "backup", "old"]
 FILTER_FILENAMES = ["all_single_and_multi_pretrain_Qwen3-8B"]  # No filtering
 
 # Define your custom labels here (fill in the empty strings with your labels)
@@ -54,6 +57,7 @@ CUSTOM_LABELS = {
     "checkpoints_act_cls_pretrain_mix_Qwen3-8B": "Past Lens + Classification Pretrain Mix",
     "checkpoints_act_latentqa_pretrain_mix_Qwen3-8B": "Past Lens + LatentQA Pretrain Mix",
 }
+
 
 def parse_answer(s: str) -> str:
     """Normalize an answer to a simple whitespace-separated, ASCII lowercase form."""
@@ -80,14 +84,16 @@ def calculate_accuracy(record):
         ground_truth = parse_answer(record["ground_truth"])
         full_seq_responses = record["full_sequence_responses"]
 
-        num_correct = sum(1 for resp in full_seq_responses if ground_truth in parse_answer(resp))
+        num_correct = sum(
+            1 for resp in full_seq_responses if ground_truth in parse_answer(resp)
+        )
         total = len(full_seq_responses)
 
         return num_correct / total if total > 0 else 0
     else:
         ground_truth = record["ground_truth"].lower()
         idx = -10
-        responses = record["token_responses"][idx:idx + 1]
+        responses = record["token_responses"][idx : idx + 1]
         # responses = record["token_responses"][-9:]
         # responses = record["token_responses"][-12:]
 
@@ -177,7 +183,9 @@ def plot_results(results_by_lora):
         ci_margin = calculate_confidence_interval(accuracies)
         error_bars.append(ci_margin)
 
-        print(f"{lora_name}: {mean_acc:.3f} ± {ci_margin:.3f} (n={len(accuracies)} records)")
+        print(
+            f"{lora_name}: {mean_acc:.3f} ± {ci_margin:.3f} (n={len(accuracies)} records)"
+        )
 
     # Print dictionary template for labels
     print("\n" + "=" * 60)
@@ -194,7 +202,12 @@ def plot_results(results_by_lora):
     fig, ax = plt.subplots(figsize=(12, 6))
     colors = plt.cm.tab10(np.linspace(0, 1, len(lora_names)))
     bars = ax.bar(
-        range(len(lora_names)), mean_accuracies, color=colors, yerr=error_bars, capsize=5, error_kw={"linewidth": 2}
+        range(len(lora_names)),
+        mean_accuracies,
+        color=colors,
+        yerr=error_bars,
+        capsize=5,
+        error_kw={"linewidth": 2},
     )
 
     ax.set_xlabel("Investigator LoRA", fontsize=12)
@@ -271,7 +284,12 @@ def plot_per_word_accuracy(results_by_lora_word):
         fig, ax = plt.subplots(figsize=(14, 6))
         colors = plt.cm.tab20(np.linspace(0, 1, len(words)))
         bars = ax.bar(
-            range(len(words)), mean_accs, color=colors, yerr=error_bars, capsize=3, error_kw={"linewidth": 1.5}
+            range(len(words)),
+            mean_accs,
+            color=colors,
+            yerr=error_bars,
+            capsize=3,
+            error_kw={"linewidth": 1.5},
         )
 
         ax.set_xlabel("Word", fontsize=12)
@@ -297,7 +315,13 @@ def plot_per_word_accuracy(results_by_lora_word):
 
         # Add horizontal line for overall mean
         overall_mean = sum(mean_accs) / len(mean_accs)
-        ax.axhline(y=overall_mean, color="red", linestyle="--", label=f"Overall mean: {overall_mean:.3f}", linewidth=2)
+        ax.axhline(
+            y=overall_mean,
+            color="red",
+            linestyle="--",
+            label=f"Overall mean: {overall_mean:.3f}",
+            linewidth=2,
+        )
         ax.legend()
 
         plt.tight_layout()

@@ -42,12 +42,18 @@ os.makedirs(SEQUENCE_VS_TOKEN_FOLDER, exist_ok=True)
 OUTPUT_PATH_BASE = f"{SEQUENCE_VS_TOKEN_FOLDER}/combined_sequence_vs_token"
 
 # Qwen3-8B Taboo configuration
-QWEN_TABOO_JSON_DIR = "experiments/taboo_eval_results/Qwen3-8B_open_ended_all_direct_test"
+QWEN_TABOO_JSON_DIR = (
+    "experiments/taboo_eval_results/Qwen3-8B_open_ended_all_direct_test"
+)
 
 # Override SSC directory for Llama 70B
-LLAMA_SSC_JSON_DIR = "experiments/ssc_eval_results_-6/Llama-3_3-70B-Instruct_open_ended_all_direct_test"
+LLAMA_SSC_JSON_DIR = (
+    "experiments/ssc_eval_results_-6/Llama-3_3-70B-Instruct_open_ended_all_direct_test"
+)
 QWEN_TABOO_HIGHLIGHT = "latentqa_cls_past_lens"
-QWEN_CHOSEN_TABOO_PROMPT = "Answer with a single word only. What is the secret word in this text?"
+QWEN_CHOSEN_TABOO_PROMPT = (
+    "Answer with a single word only. What is the secret word in this text?"
+)
 
 
 def _highlight_mean(results_by_lora: dict, keyword: str) -> tuple[float, float]:
@@ -62,7 +68,9 @@ def _taboo_stats() -> tuple[str, float, float, float, float]:
     token_results, _ = load_taboo_results(
         TABOO_JSON_DIR, required_verbalizer_prompt=CHOSEN_TABOO_PROMPT, sequence=False
     )
-    seq_results, _ = load_taboo_results(TABOO_JSON_DIR, required_verbalizer_prompt=CHOSEN_TABOO_PROMPT, sequence=True)
+    seq_results, _ = load_taboo_results(
+        TABOO_JSON_DIR, required_verbalizer_prompt=CHOSEN_TABOO_PROMPT, sequence=True
+    )
     token_mean, token_ci = _highlight_mean(token_results, TABOO_HIGHLIGHT)
     seq_mean, seq_ci = _highlight_mean(seq_results, TABOO_HIGHLIGHT)
     return ("Taboo (Gemma-2-9B-IT)", token_mean, token_ci, seq_mean, seq_ci)
@@ -70,10 +78,14 @@ def _taboo_stats() -> tuple[str, float, float, float, float]:
 
 def _qwen_taboo_stats() -> tuple[str, float, float, float, float]:
     token_results, _ = load_taboo_results(
-        QWEN_TABOO_JSON_DIR, required_verbalizer_prompt=QWEN_CHOSEN_TABOO_PROMPT, sequence=False
+        QWEN_TABOO_JSON_DIR,
+        required_verbalizer_prompt=QWEN_CHOSEN_TABOO_PROMPT,
+        sequence=False,
     )
     seq_results, _ = load_taboo_results(
-        QWEN_TABOO_JSON_DIR, required_verbalizer_prompt=QWEN_CHOSEN_TABOO_PROMPT, sequence=True
+        QWEN_TABOO_JSON_DIR,
+        required_verbalizer_prompt=QWEN_CHOSEN_TABOO_PROMPT,
+        sequence=True,
     )
     token_mean, token_ci = _highlight_mean(token_results, QWEN_TABOO_HIGHLIGHT)
     seq_mean, seq_ci = _highlight_mean(seq_results, QWEN_TABOO_HIGHLIGHT)
@@ -128,19 +140,29 @@ async def _ssc_stats() -> tuple[str, float, float, float, float]:
     return ("SSC (Llama-3.3-70B)", token_mean, token_ci, seq_mean, seq_ci)
 
 
-def _personaqa_open_ended_stats(model: str, model_title: str, highlight_keyword: str) -> tuple[str, float, float, float, float]:
+def _personaqa_open_ended_stats(
+    model: str, model_title: str, highlight_keyword: str
+) -> tuple[str, float, float, float, float]:
     """Get PersonaQA open-ended stats for a single model."""
     run_dir = Path(f"experiments/personaqa_results/{model}_open_ended")
-    results = load_results_from_folder(run_dir, model, sequence=False, is_open_ended=True, verbose=False)
+    results = load_results_from_folder(
+        run_dir, model, sequence=False, is_open_ended=True, verbose=False
+    )
     matches = [name for name in results if highlight_keyword in name]
-    assert len(matches) == 1, f"Expected one match for {highlight_keyword} in {run_dir}, found {matches}"
+    assert len(matches) == 1, (
+        f"Expected one match for {highlight_keyword} in {run_dir}, found {matches}"
+    )
     token_data = results[matches[0]]
     token_mean = float(token_data["accuracy"])
     token_ci = float(token_data["ci"])
 
-    results_seq = load_results_from_folder(run_dir, model, sequence=True, is_open_ended=True, verbose=False)
+    results_seq = load_results_from_folder(
+        run_dir, model, sequence=True, is_open_ended=True, verbose=False
+    )
     matches_seq = [name for name in results_seq if highlight_keyword in name]
-    assert len(matches_seq) == 1, f"Expected one match for {highlight_keyword} in {run_dir}, found {matches_seq}"
+    assert len(matches_seq) == 1, (
+        f"Expected one match for {highlight_keyword} in {run_dir}, found {matches_seq}"
+    )
     seq_data = results_seq[matches_seq[0]]
     seq_mean = float(seq_data["accuracy"])
     seq_ci = float(seq_data["ci"])
@@ -175,7 +197,13 @@ def plot_sequence_vs_token(stats: list[tuple[str, float, float, float, float]]):
     colors = [palette[label] for label in labels]
 
     token_bars = ax.bar(
-        x - width / 2.0, token_means, width, color=colors, yerr=token_cis, capsize=5, error_kw={"linewidth": 2}
+        x - width / 2.0,
+        token_means,
+        width,
+        color=colors,
+        yerr=token_cis,
+        capsize=5,
+        error_kw={"linewidth": 2},
     )
     seq_bars = ax.bar(
         x + width / 2.0,
@@ -200,9 +228,14 @@ def plot_sequence_vs_token(stats: list[tuple[str, float, float, float, float]]):
     ax.tick_params(axis="y", labelsize=FONT_SIZE_Y_AXIS_TICK)
     ax.set_ylabel("Average Accuracy", fontsize=FONT_SIZE_Y_AXIS_LABEL)
 
-    dataset_handles = [Patch(facecolor=palette[label], edgecolor="black", label=label) for label in labels]
+    dataset_handles = [
+        Patch(facecolor=palette[label], edgecolor="black", label=label)
+        for label in labels
+    ]
     token_handle = Patch(facecolor="white", edgecolor="black", label="Single Token")
-    sequence_handle = Patch(facecolor="white", edgecolor="black", hatch=HATCH, label="Full Sequence")
+    sequence_handle = Patch(
+        facecolor="white", edgecolor="black", hatch=HATCH, label="Full Sequence"
+    )
     fig.legend(
         handles=dataset_handles + [token_handle, sequence_handle],
         loc="lower center",
@@ -232,7 +265,9 @@ async def main():
 
     # PersonaQA open-ended stats for all models
     personaqa_stats = []
-    for model, model_title, highlight_keyword in zip(MODELS, MODEL_NAMES, HIGHLIGHT_KEYWORDS):
+    for model, model_title, highlight_keyword in zip(
+        MODELS, MODEL_NAMES, HIGHLIGHT_KEYWORDS
+    ):
         stats = _personaqa_open_ended_stats(model, model_title, highlight_keyword)
         personaqa_stats.append(stats)
 
@@ -243,4 +278,3 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
-

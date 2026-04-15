@@ -69,12 +69,16 @@ def collect_activations_multiple_layers(
     max_offset: int | None,
 ) -> dict[int, torch.Tensor]:
     if min_offset is not None:
-        assert max_offset is not None, "max_offset must be provided if min_offset is provided"
+        assert max_offset is not None, (
+            "max_offset must be provided if min_offset is provided"
+        )
         assert max_offset < min_offset, "max_offset must be less than min_offset"
         assert min_offset < 0, "min_offset must be less than 0"
         assert max_offset < 0, "max_offset must be less than 0"
     else:
-        assert max_offset is None, "max_offset must be provided if min_offset is not provided"
+        assert max_offset is None, (
+            "max_offset must be provided if min_offset is not provided"
+        )
 
     activations_BLD_by_layer = {}
 
@@ -91,7 +95,9 @@ def collect_activations_multiple_layers(
             activations_BLD_by_layer[layer] = outputs
 
         if min_offset is not None:
-            activations_BLD_by_layer[layer] = activations_BLD_by_layer[layer][:, max_offset:min_offset, :]
+            activations_BLD_by_layer[layer] = activations_BLD_by_layer[layer][
+                :, max_offset:min_offset, :
+            ]
 
         if layer == max_layer:
             raise EarlyStopException("Early stopping after capturing activations")
@@ -122,6 +128,10 @@ def collect_activations_multiple_layers(
 # tower which won't receive gradients during text-only training, causing DDP errors.
 # These patterns target only the language model layers.
 VLM_TEXT_ONLY_LORA_TARGETS = {
+    # MoE model: attention-only LoRA to avoid applying LoRA across 128 experts per layer
+    "gemma-4-26b": r"model\.language_model\..*\.(q_proj|k_proj|v_proj|o_proj)",
+    # Dense Gemma 4: full LM linear layers, excludes vision and audio encoders
+    "gemma-4": r"model\.language_model\..*\.(q_proj|k_proj|v_proj|o_proj|gate_proj|up_proj|down_proj)",
     "gemma-3": r"model\.language_model\..*\.(q_proj|k_proj|v_proj|o_proj|gate_proj|up_proj|down_proj)",
 }
 
@@ -141,18 +151,30 @@ def get_hf_submodule(model: AutoModelForCausalLM, layer: int, use_lora: bool = F
     if use_lora:
         if "pythia" in model_name:
             raise ValueError("Need to determine how to get submodule for LoRA")
-        elif "gemma-3" in model_name:
-            return model.base_model.language_model.layers[layer]
-        elif "gemma-2" in model_name or "mistral" in model_name or "Llama" in model_name or "Qwen" in model_name:
+        elif "gemma-4" in model_name or "gemma-3" in model_name:
+            # Gemma 3/4 VLMs: base_model (LoRA) -> model (ConditionalGeneration) -> model (VLM) -> language_model -> layers
+            return model.base_model.model.model.language_model.layers[layer]
+        elif (
+            "gemma-2" in model_name
+            or "mistral" in model_name
+            or "Llama" in model_name
+            or "Qwen" in model_name
+        ):
             return model.base_model.model.model.layers[layer]
         else:
             raise ValueError(f"Please add submodule for model {model_name}")
 
     if "pythia" in model_name:
         return model.gpt_neox.layers[layer]
-    elif "gemma-3" in model_name:
-        return model.language_model.layers[layer]
-    elif "gemma-2" in model_name or "mistral" in model_name or "Llama" in model_name or "Qwen" in model_name:
+    elif "gemma-4" in model_name or "gemma-3" in model_name:
+        # Gemma 3/4 VLMs: model (ConditionalGeneration) -> model (VLM) -> language_model -> layers
+        return model.model.language_model.layers[layer]
+    elif (
+        "gemma-2" in model_name
+        or "mistral" in model_name
+        or "Llama" in model_name
+        or "Qwen" in model_name
+    ):
         return model.model.layers[layer]
     else:
         raise ValueError(f"Please add submodule for model {model_name}")

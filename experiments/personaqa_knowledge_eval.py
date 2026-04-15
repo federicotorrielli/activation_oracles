@@ -77,7 +77,13 @@ ACCEPTABLE_MATCHES = {
     "baduk": ["baduk", "go"],
     "go": ["go", "baduk"],
     # Countries
-    "united states": ["united states", "usa", "us", "america", "united states of america"],
+    "united states": [
+        "united states",
+        "usa",
+        "us",
+        "america",
+        "united states of america",
+    ],
 }
 
 
@@ -290,7 +296,9 @@ for model_config in MODEL_CONFIGS:
 
         overall_accuracy = total_correct / total_count * 100
         print("-" * 40)
-        print(f"  {'OVERALL':25s}: {total_correct:3d}/{total_count:3d} ({overall_accuracy:5.1f}%)")
+        print(
+            f"  {'OVERALL':25s}: {total_correct:3d}/{total_count:3d} ({overall_accuracy:5.1f}%)"
+        )
 
         # Save results to JSON
         output_data = {

@@ -61,7 +61,9 @@ def compare_patchscope_responses(response: str, target_response: str) -> bool:
     return target_response in response
 
 
-def build_prompts_and_targets(df: pd.DataFrame, tokenizer) -> Tuple[List[str], List[str]]:
+def build_prompts_and_targets(
+    df: pd.DataFrame, tokenizer
+) -> Tuple[List[str], List[str]]:
     """Create chat prompts and targets for a single dataset file."""
     prompts: list[str] = []
     targets: list[str] = []
@@ -95,7 +97,9 @@ def build_prompts_and_targets(df: pd.DataFrame, tokenizer) -> Tuple[List[str], L
     return prompts, targets
 
 
-def evaluate_dataset_file(path: str, llm: vllm.LLM, tokenizer) -> Tuple[float, List[Tuple[str, str, str]]]:
+def evaluate_dataset_file(
+    path: str, llm: vllm.LLM, tokenizer
+) -> Tuple[float, List[Tuple[str, str, str]]]:
     """Return (accuracy, items) for a single .tsv dataset file.
 
     items is a list of (prompt, response, ground_truth) tuples.
@@ -103,7 +107,9 @@ def evaluate_dataset_file(path: str, llm: vllm.LLM, tokenizer) -> Tuple[float, L
     df = pd.read_csv(path, sep="\t")
     prompts, targets = build_prompts_and_targets(df, tokenizer)
 
-    sampling_params = vllm.SamplingParams(temperature=TEMPERATURE, max_tokens=MAX_NEW_TOKENS)
+    sampling_params = vllm.SamplingParams(
+        temperature=TEMPERATURE, max_tokens=MAX_NEW_TOKENS
+    )
 
     # Generate for all prompts at once (simple path)
     outs = llm.generate(prompts, sampling_params)
@@ -146,7 +152,9 @@ def main() -> None:
 
     # Compute mean accuracy over all items (not per-dataset mean)
     total_items = sum(len(items) for items in details.values())
-    total_correct = sum(results[fname] * len(details[fname]) for fname in results.keys())
+    total_correct = sum(
+        results[fname] * len(details[fname]) for fname in results.keys()
+    )
     mean_accuracy_all_items = total_correct / total_items
 
     # Include overall mean accuracy in the results dictionary
@@ -162,8 +170,6 @@ def main() -> None:
 
     with open(OUTPUT_FILENAME, "w") as f:
         json.dump(data, f)
-
-
 
 
 if __name__ == "__main__":

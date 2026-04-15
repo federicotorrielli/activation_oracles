@@ -5,7 +5,9 @@ import random
 from typing import Any
 import vllm
 
-from nl_probes.dataset_classes.classification_dataset_manager import get_samples_from_groups
+from nl_probes.dataset_classes.classification_dataset_manager import (
+    get_samples_from_groups,
+)
 from nl_probes.dataset_classes.classification import (
     get_classification_datapoints_from_context_qa_examples,
 )
@@ -33,14 +35,18 @@ def build_zero_shot_prompts(
 
     for group, cfg in classification_datasets.items():
         assert "num_test" in cfg, f"num_test not specified for group {group}"
-        assert "splits" in cfg and "test" in cfg["splits"], f"'test' split not requested for {group}"
+        assert "splits" in cfg and "test" in cfg["splits"], (
+            f"'test' split not requested for {group}"
+        )
 
         # Collect context-level samples across all datasets in the group, then
         # select exactly num_test context samples (matching classification_eval semantics).
         all_examples = get_samples_from_groups([group], num_qa_per_sample)
         random.shuffle(all_examples)
         num_test = int(cfg["num_test"])
-        assert len(all_examples) >= num_test, f"Not enough examples for test in group {group}"
+        assert len(all_examples) >= num_test, (
+            f"Not enough examples for test in group {group}"
+        )
         test_examples = all_examples[-num_test:]
 
         # Convert ContextQASample -> ClassificationDatapoint (adds Yes/No instruction)
@@ -60,7 +66,9 @@ def build_zero_shot_prompts(
     return prompts_by_group
 
 
-def _print_preview(prompts_by_group: dict[str, list[dict[str, str]]], per_group_preview: int = 2) -> None:
+def _print_preview(
+    prompts_by_group: dict[str, list[dict[str, str]]], per_group_preview: int = 2
+) -> None:
     for group, items in prompts_by_group.items():
         print(f"\n=== {group} :: {len(items)} items ===")
         n_show = min(per_group_preview, len(items))
@@ -82,7 +90,11 @@ if __name__ == "__main__":
 
     MAIN_TEST_SIZE = 250
     CLASSIFICATION_DATASETS: dict[str, dict[str, Any]] = {
-        "geometry_of_truth": {"num_train": 0, "num_test": MAIN_TEST_SIZE, "splits": ["test"]},
+        "geometry_of_truth": {
+            "num_train": 0,
+            "num_test": MAIN_TEST_SIZE,
+            "splits": ["test"],
+        },
         "relations": {"num_train": 0, "num_test": MAIN_TEST_SIZE, "splits": ["test"]},
         "sst2": {"num_train": 0, "num_test": MAIN_TEST_SIZE, "splits": ["test"]},
         "md_gender": {"num_train": 0, "num_test": MAIN_TEST_SIZE, "splits": ["test"]},
@@ -90,18 +102,62 @@ if __name__ == "__main__":
         "ag_news": {"num_train": 0, "num_test": MAIN_TEST_SIZE, "splits": ["test"]},
         "ner": {"num_train": 0, "num_test": MAIN_TEST_SIZE, "splits": ["test"]},
         "tense": {"num_train": 0, "num_test": MAIN_TEST_SIZE, "splits": ["test"]},
-        "language_identification": {"num_train": 0, "num_test": MAIN_TEST_SIZE, "splits": ["test"]},
-        "singular_plural": {"num_train": 0, "num_test": MAIN_TEST_SIZE, "splits": ["test"]},
-        "engels_headline_istrump": {"num_train": 0, "num_test": 250, "splits": ["test"]},
-        "engels_headline_isobama": {"num_train": 0, "num_test": 250, "splits": ["test"]},
-        "engels_headline_ischina": {"num_train": 0, "num_test": 250, "splits": ["test"]},
+        "language_identification": {
+            "num_train": 0,
+            "num_test": MAIN_TEST_SIZE,
+            "splits": ["test"],
+        },
+        "singular_plural": {
+            "num_train": 0,
+            "num_test": MAIN_TEST_SIZE,
+            "splits": ["test"],
+        },
+        "engels_headline_istrump": {
+            "num_train": 0,
+            "num_test": 250,
+            "splits": ["test"],
+        },
+        "engels_headline_isobama": {
+            "num_train": 0,
+            "num_test": 250,
+            "splits": ["test"],
+        },
+        "engels_headline_ischina": {
+            "num_train": 0,
+            "num_test": 250,
+            "splits": ["test"],
+        },
         "engels_hist_fig_ismale": {"num_train": 0, "num_test": 250, "splits": ["test"]},
-        "engels_news_class_politics": {"num_train": 0, "num_test": 250, "splits": ["test"]},
-        "engels_wikidata_isjournalist": {"num_train": 0, "num_test": 250, "splits": ["test"]},
-        "engels_wikidata_isathlete": {"num_train": 0, "num_test": 250, "splits": ["test"]},
-        "engels_wikidata_ispolitician": {"num_train": 0, "num_test": 250, "splits": ["test"]},
-        "engels_wikidata_issinger": {"num_train": 0, "num_test": 250, "splits": ["test"]},
-        "engels_wikidata_isresearcher": {"num_train": 0, "num_test": 250, "splits": ["test"]},
+        "engels_news_class_politics": {
+            "num_train": 0,
+            "num_test": 250,
+            "splits": ["test"],
+        },
+        "engels_wikidata_isjournalist": {
+            "num_train": 0,
+            "num_test": 250,
+            "splits": ["test"],
+        },
+        "engels_wikidata_isathlete": {
+            "num_train": 0,
+            "num_test": 250,
+            "splits": ["test"],
+        },
+        "engels_wikidata_ispolitician": {
+            "num_train": 0,
+            "num_test": 250,
+            "splits": ["test"],
+        },
+        "engels_wikidata_issinger": {
+            "num_train": 0,
+            "num_test": 250,
+            "splits": ["test"],
+        },
+        "engels_wikidata_isresearcher": {
+            "num_train": 0,
+            "num_test": 250,
+            "splits": ["test"],
+        },
     }
 
     # Expect CLASSIFICATION_DATASETS to be defined in this file.
@@ -166,9 +222,11 @@ if __name__ == "__main__":
     # Macro stats over datasets
     acc_values = list(dataset_accuracies.values())
     macro_mean = sum(acc_values) / len(acc_values) if len(acc_values) > 0 else 0.0
-    macro_std = math.sqrt(
-        sum((a - macro_mean) ** 2 for a in acc_values) / len(acc_values)
-    ) if len(acc_values) > 0 else 0.0
+    macro_std = (
+        math.sqrt(sum((a - macro_mean) ** 2 for a in acc_values) / len(acc_values))
+        if len(acc_values) > 0
+        else 0.0
+    )
 
     # Micro accuracy over all items
     micro_acc = total_correct / total_items if total_items > 0 else 0.0

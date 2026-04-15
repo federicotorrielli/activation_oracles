@@ -148,7 +148,9 @@ def train_with_sft_only(
     )
 
     # Debug: print tokenization details for first few batches
-    sft_trainer.data_collator = make_debug_collator(sft_trainer.data_collator, tokenizer, max_prints=3)
+    sft_trainer.data_collator = make_debug_collator(
+        sft_trainer.data_collator, tokenizer, max_prints=3
+    )
 
     # if rollout_cb is not None:
     #     sft_trainer.add_callback(rollout_cb)
@@ -175,7 +177,9 @@ def train_with_sft_only(
     torch.cuda.empty_cache()
 
 
-def create_assistant_mask(messages: list[dict[str, str]], tokenizer: AutoTokenizer) -> dict[str, torch.Tensor]:
+def create_assistant_mask(
+    messages: list[dict[str, str]], tokenizer: AutoTokenizer
+) -> dict[str, torch.Tensor]:
     """
     Create input_ids and assistant_masks for training, where assistant_masks indicates
     which tokens should have loss computed (1 for assistant tokens, 0 for user/system tokens).
@@ -323,9 +327,13 @@ if __name__ == "__main__":
         run_name = f"{model_name}_{dataset_name}"
         run_name = run_name.replace("/", "-")
 
-        config = EvalConfig(model_name=model_name, model_lora_dir="model_lora", wandb_info=run_str)
+        config = EvalConfig(
+            model_name=model_name, model_lora_dir="model_lora", wandb_info=run_str
+        )
 
-        lora_name = f"{model_name.split('/')[-1]}-{dataset_name.split('/')[-1]}_{run_str}"
+        lora_name = (
+            f"{model_name.split('/')[-1]}-{dataset_name.split('/')[-1]}_{run_str}"
+        )
         lora_name = lora_name.replace(" ", "_").replace(".", "_").replace("/", "_")
 
         lora_path = Path(config.model_lora_dir) / lora_name

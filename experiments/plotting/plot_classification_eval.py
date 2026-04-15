@@ -101,7 +101,10 @@ def calculate_accuracy(records, dataset_ids):
     for record in records:
         if record["dataset_id"] in dataset_ids:
             total += 1
-            if record["target"].lower().strip() in record["ground_truth"].lower().strip():
+            if (
+                record["target"].lower().strip()
+                in record["ground_truth"].lower().strip()
+            ):
                 correct += 1
 
     if total == 0:
@@ -131,7 +134,11 @@ def load_results_from_folder(folder_path, verbose=False):
 
     # Filter out files based on FILTERED_FILENAMES
     if FILTERED_FILENAMES:
-        json_files = [f for f in json_files if not any(filter_str in f.name for filter_str in FILTERED_FILENAMES)]
+        json_files = [
+            f
+            for f in json_files
+            if not any(filter_str in f.name for filter_str in FILTERED_FILENAMES)
+        ]
 
     # Print dictionary template for easy copy-paste
     print("Found JSON files:")
@@ -160,7 +167,10 @@ def load_results_from_folder(folder_path, verbose=False):
                     dataset_total_counts[ds] = 0
                     dataset_correct_counts[ds] = 0
                 dataset_total_counts[ds] += 1
-                if record["target"].lower().strip() in record["ground_truth"].lower().strip():
+                if (
+                    record["target"].lower().strip()
+                    in record["ground_truth"].lower().strip()
+                ):
                     dataset_correct_counts[ds] += 1
             for ds in sorted(dataset_total_counts.keys()):
                 acc = dataset_correct_counts[ds] / dataset_total_counts[ds]
@@ -191,7 +201,13 @@ def load_results_from_folder(folder_path, verbose=False):
 
 
 def _plot_split(
-    results, split, highlight_keyword, title, output_path, highlight_color="#FDB813", highlight_hatch="////"
+    results,
+    split,
+    highlight_keyword,
+    title,
+    output_path,
+    highlight_color="#FDB813",
+    highlight_hatch="////",
 ):
     """Plot a single split (IID or OOD) mirroring the style of gender plots."""
     assert split in ("iid", "ood")
@@ -202,7 +218,9 @@ def _plot_split(
 
     # Find and require exactly one highlighted entry, move it to index 0
     matches = [i for i, n in enumerate(names) if highlight_keyword in n]
-    assert len(matches) == 1, f"Keyword '{highlight_keyword}' matched {len(matches)}: {[names[i] for i in matches]}"
+    assert len(matches) == 1, (
+        f"Keyword '{highlight_keyword}' matched {len(matches)}: {[names[i] for i in matches]}"
+    )
     m = matches[0]
     order = [m] + [i for i in range(len(names)) if i != m]
     names = [names[i] for i in order]
@@ -222,7 +240,14 @@ def _plot_split(
     fig, ax = plt.subplots(figsize=(12, 6))
     colors = list(plt.cm.tab10(np.linspace(0, 1, len(names))))
     colors[0] = highlight_color
-    bars = ax.bar(range(len(names)), values, color=colors, yerr=errors, capsize=5, error_kw={"linewidth": 2})
+    bars = ax.bar(
+        range(len(names)),
+        values,
+        color=colors,
+        yerr=errors,
+        capsize=5,
+        error_kw={"linewidth": 2},
+    )
 
     # Distinctive styling for the highlighted bar
     bars[0].set_hatch(highlight_hatch)
@@ -244,7 +269,12 @@ def _plot_split(
     for bar, val, err in zip(bars, values, errors):
         h = bar.get_height()
         ax.text(
-            bar.get_x() + bar.get_width() / 2.0, h + err + 0.02, f"{val:.3f}", ha="center", va="bottom", fontsize=10
+            bar.get_x() + bar.get_width() / 2.0,
+            h + err + 0.02,
+            f"{val:.3f}",
+            ha="center",
+            va="bottom",
+            fontsize=10,
         )
 
     # Legend uses CUSTOM_LABELS when available

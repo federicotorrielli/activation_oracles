@@ -13,8 +13,6 @@ class SAEInfo(BaseModel):
     sae_repo_id: str
 
 
-
-
 #### Try out smaller V2 models that are smaller"""
 class TokenActivationV2(BaseModel):
     s: str
@@ -70,14 +68,18 @@ class SAEVerlData(BaseModel):
     feature_vector: list[float]  # This needs to be added in by the script
     position_id: int  # This needs to be added in by the script
     activations: SAEActivationsV2  # Sentences that should activate the feature
-    hard_negatives: list[SAEActivationsV2]  # Sentences that should NOT activate the feature
+    hard_negatives: list[
+        SAEActivationsV2
+    ]  # Sentences that should NOT activate the feature
 
     @classmethod
     def from_typed_dict(cls, sae_data: "SAEVerlDataTypedDict") -> "SAEVerlData":
         return SAEVerlData.model_validate(sae_data)
 
     @classmethod
-    def from_sae(cls, sae: SAEV2, feature_vector: list[float], position_id: int) -> "SAEVerlData":
+    def from_sae(
+        cls, sae: SAEV2, feature_vector: list[float], position_id: int
+    ) -> "SAEVerlData":
         return SAEVerlData(
             sae_id=sae.sae_id,
             feature_vector=feature_vector,
@@ -87,7 +89,9 @@ class SAEVerlData(BaseModel):
         )
 
 
-def make_sae_verl_typed_dict(sae_data: SAEV2, position_id: int, feature_vector: list[float]) -> SAEVerlDataTypedDict:
+def make_sae_verl_typed_dict(
+    sae_data: SAEV2, position_id: int, feature_vector: list[float]
+) -> SAEVerlDataTypedDict:
     return {
         "sae_id": sae_data.sae_id,
         "position_id": position_id,

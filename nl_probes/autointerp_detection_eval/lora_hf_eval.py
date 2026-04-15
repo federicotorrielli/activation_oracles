@@ -38,7 +38,9 @@ from detection_eval.detection_basemodels import SAEV2, SAEInfo
 # --------------------------------------------------------------------------
 
 
-def create_sae_train_test_eval_data(sae: SAEV2) -> eval_detection_v2.SAETrainTest | None:
+def create_sae_train_test_eval_data(
+    sae: SAEV2,
+) -> eval_detection_v2.SAETrainTest | None:
     # Deterministic sampling from test_target_activating_sentences using SAE ID as seed
     sampled_test_sentences = 5
     return eval_detection_v2.SAETrainTest.from_sae(
@@ -70,7 +72,9 @@ def create_detection_eval_data(
     print(len(sae_hard_negatives))
     sae_info = sae_hard_negatives[0].sae_info
     for x in sae_hard_negatives:
-        assert x.sae_info == sae_info, f"sae_hard_negative.sae_info {x.sae_info} does not match {sae_info}"
+        assert x.sae_info == sae_info, (
+            f"sae_hard_negative.sae_info {x.sae_info} does not match {sae_info}"
+        )
 
     split = sae_hard_negatives.map(create_sae_train_test_eval_data).flatten_option()
 
@@ -97,7 +101,9 @@ def build_eval_data(
     """
 
     if enable_thinking:
-        raise ValueError("enable_thinking is not supported, requires modifying construct_eval_dataset()")
+        raise ValueError(
+            "enable_thinking is not supported, requires modifying construct_eval_dataset()"
+        )
 
     sae = load_sae(
         sae_info.sae_repo_id,
@@ -142,7 +148,12 @@ def run_explanation_generation_hf(
     model = load_model(model_name, dtype)
     if lora_path is not None:
         adapter_name = lora_path
-        model.load_adapter(lora_path, adapter_name=adapter_name, is_trainable=False, low_cpu_mem_usage=True)
+        model.load_adapter(
+            lora_path,
+            adapter_name=adapter_name,
+            is_trainable=False,
+            low_cpu_mem_usage=True,
+        )
         model.set_adapter(adapter_name)
 
     submodule = get_submodule(model, cfg.hook_onto_layer)
@@ -175,12 +186,16 @@ def build_detection_prompts(
         f"Lengths differ - detection_data={len(detection_data)} eval_results={len(eval_results)}"
     )
 
-    train_eval_prompt = lightweight_sft.build_training_prompt(cfg.positive_negative_examples, sae_info.sae_layer)
+    train_eval_prompt = lightweight_sft.build_training_prompt(
+        cfg.positive_negative_examples, sae_info.sae_layer
+    )
 
     all_detection_prompts: list[eval_detection_v2.SAETrainTestWithExplanation] = []
     for det, ev in zip(detection_data, eval_results):
         eval_sae_id = ev.feature_idx
-        assert eval_sae_id == det.sae_id, f"feature_idx {eval_sae_id} does not match detection sae_id {det.sae_id}"
+        assert eval_sae_id == det.sae_id, (
+            f"feature_idx {eval_sae_id} does not match detection sae_id {det.sae_id}"
+        )
 
         chat_history = caller.ChatHistory().add_user(content=train_eval_prompt)
         explanation = chat_history.add_assistant(content=ev.api_response)
@@ -287,7 +302,9 @@ def summarize_detection_scores(results, verbose: bool = False) -> dict[str, floa
         print(f"  Average Precision: {avg_precision:.3f}")
         print(f"  Average Recall:    {avg_recall:.3f}")
         print(f"  Average F1-Score:  {avg_f1:.3f}")
-        print(f"  Perfect F1:        {num_perfect:,} / {len(results)}  ({num_perfect / len(results):.2%})")
+        print(
+            f"  Perfect F1:        {num_perfect:,} / {len(results)}  ({num_perfect / len(results):.2%})"
+        )
     return {
         "avg_precision": avg_precision,
         "avg_recall": avg_recall,
@@ -327,7 +344,9 @@ def main() -> None:
         thinking_str = ""
 
     layer_percent = 50
-    eval_data_file = f"data/qwen_hard_negatives_50000_50500_layer_percent_{layer_percent}.jsonl"
+    eval_data_file = (
+        f"data/qwen_hard_negatives_50000_50500_layer_percent_{layer_percent}.jsonl"
+    )
     # lora_path = "checkpoints_simple_multi_layer_longer/final"
     checkpoint_steps = [2000, 4000, 8000, 16000]
     checkpoint_steps = []
@@ -344,7 +363,9 @@ def main() -> None:
         assert "encoder" in lora_paths[0]
 
     for checkpoint_step in checkpoint_steps:
-        lora_paths.append(f"checkpoints_larger_dataset_{decoder_str}/step_{checkpoint_step}")
+        lora_paths.append(
+            f"checkpoints_larger_dataset_{decoder_str}/step_{checkpoint_step}"
+        )
 
     # lora_paths.append(None)
 
@@ -367,7 +388,11 @@ def main() -> None:
         eval_set_size=eval_set_size,
         eval_features=[],
         use_decoder_vectors=use_decoder_vectors,
-        generation_kwargs={"do_sample": True, "temperature": 0.5, "max_new_tokens": 200},
+        generation_kwargs={
+            "do_sample": True,
+            "temperature": 0.5,
+            "max_new_tokens": 200,
+        },
         steering_coefficient=2.0,
         # LoRA settings - loaded from disk, eval only
         use_lora=True,
@@ -393,7 +418,9 @@ def main() -> None:
         cfg.generation_kwargs["max_new_tokens"] = 2000
 
     # IDs are 0..eval_set_size-1 by default
-    requested_sae_ids = list(range(sae_start_index, sae_start_index + cfg.eval_set_size))
+    requested_sae_ids = list(
+        range(sae_start_index, sae_start_index + cfg.eval_set_size)
+    )
 
     # Tokenizer and model
     tokenizer = load_tokenizer(cfg.model_name)
@@ -435,7 +462,9 @@ def main() -> None:
         json.dump(all_eval_results, f)
 
     for lora_path in lora_paths:
-        print(f"Evaluating explanations for {len(eval_data)} SAEs on device={device}, dtype={dtype}...")
+        print(
+            f"Evaluating explanations for {len(eval_data)} SAEs on device={device}, dtype={dtype}..."
+        )
         eval_results = run_explanation_generation_hf(
             cfg=cfg,
             eval_data=eval_data,
@@ -451,7 +480,9 @@ def main() -> None:
         keep = list(range(0, len(eval_results), sample_stride))
         eval_results = [eval_results[i] for i in keep]
 
-        for eval_result, single_detection_data in zip(eval_results, all_detection_data, strict=True):
+        for eval_result, single_detection_data in zip(
+            eval_results, all_detection_data, strict=True
+        ):
             assert eval_result.feature_idx == single_detection_data.sae_id, (
                 f"Mismatch: eval_result.feature_idx={eval_result.feature_idx} single_detection_data.sae_id={single_detection_data.sae_id}"
             )
@@ -467,7 +498,9 @@ def main() -> None:
             explainer_model_tag=lora_path,
         )
 
-        print(f"Scoring {len(detection_prompts)} detection prompts with {detector_model}...")
+        print(
+            f"Scoring {len(detection_prompts)} detection prompts with {detector_model}..."
+        )
         results = score_detection(
             prompts=detection_prompts,
             detection_model=detector_model,

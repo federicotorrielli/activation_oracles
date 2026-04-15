@@ -16,6 +16,10 @@ KNOWN_LAYER_COUNTS = {
     "google/gemma-3-4b-it": 34,
     "google/gemma-3-12b-it": 48,
     "google/gemma-3-27b-it": 62,
+    "google/gemma-4-E2B-it": 35,
+    "google/gemma-4-E4B-it": 42,
+    "google/gemma-4-26B-A4B-it": 30,
+    "google/gemma-4-31B-it": 60,
     "meta-llama/Llama-3.1-8B-Instruct": 32,
     "meta-llama/Llama-3.2-1B-Instruct": 16,
     "meta-llama/Llama-3.3-70B-Instruct": 80,
@@ -26,4 +30,6 @@ KNOWN_LAYER_COUNTS = {
 def test_get_layer_count(model_name: str, expected_layers: int):
     """Verify get_layer_count matches known layer counts from HuggingFace configs."""
     actual_layers = get_layer_count(model_name)
-    assert actual_layers == expected_layers, f"{model_name}: expected {expected_layers}, got {actual_layers}"
+    assert actual_layers == expected_layers, (
+        f"{model_name}: expected {expected_layers}, got {actual_layers}"
+    )

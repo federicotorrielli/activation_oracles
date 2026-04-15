@@ -16,6 +16,7 @@ from nl_probes.dataset_classes.act_dataset_manager import (
 from nl_probes.utils.common import layer_percent_to_layer, load_tokenizer
 from nl_probes.utils.dataset_utils import (
     TrainingDataPoint,
+    _unwrap_token_ids,
     create_training_datapoint,
 )
 
@@ -41,10 +42,16 @@ class LatentQADatasetLoader(ActDatasetLoader):
 
         self.dataset_config.dataset_name = "latentqa"
 
-        self.dataset_params: LatentQADatasetConfig = dataset_config.custom_dataset_params
+        self.dataset_params: LatentQADatasetConfig = (
+            dataset_config.custom_dataset_params
+        )
 
-        assert self.dataset_config.splits == ["train"], "Past lens dataset only supports train split right now"
-        assert self.dataset_config.num_test == 0, "Past lens dataset only supports train split right now"
+        assert self.dataset_config.splits == ["train"], (
+            "Past lens dataset only supports train split right now"
+        )
+        assert self.dataset_config.num_test == 0, (
+            "Past lens dataset only supports train split right now"
+        )
 
         if self.dataset_config.num_train < self.dataset_config.batch_size:
             raise ValueError(
@@ -79,7 +86,11 @@ class LatentQADatasetLoader(ActDatasetLoader):
         training_data = []
 
         for dp in tqdm(ds, desc="Creating latentqa dataset"):
-            training_data.append(create_latentqa_training_datapoint(dp, tokenizer, layers, self.dataset_params))
+            training_data.append(
+                create_latentqa_training_datapoint(
+                    dp, tokenizer, layers, self.dataset_params
+                )
+            )
 
         self.save_dataset(training_data, "train")
 
@@ -98,7 +109,10 @@ class LatentQADatapoint(BaseModel):
 
 
 def create_latentqa_training_datapoint(
-    datapoint_dict: dict, tokenizer: AutoTokenizer, act_layers: list[int], dataset_params: LatentQADatasetConfig
+    datapoint_dict: dict,
+    tokenizer: AutoTokenizer,
+    act_layers: list[int],
+    dataset_params: LatentQADatasetConfig,
 ) -> TrainingDataPoint:
     masked_turn_count = {"stimulus_completion": 2, "stimulus": 2, "control": 0}
 
@@ -106,11 +120,20 @@ def create_latentqa_training_datapoint(
 
     num_masked = masked_turn_count[datapoint.source]
 
-    masked_turns = datapoint.read_prompt[:num_masked]
+    # Convert Pydantic Items to dicts — Jinja chat templates expect .get() (dict),
+    # not attribute access (Pydantic BaseModel).
+    read_prompt_dicts = [item.model_dump() for item in datapoint.read_prompt]
+    masked_turns = read_prompt_dicts[:num_masked]
 
     if num_masked > 0:
-        masked_str = tokenizer.apply_chat_template(masked_turns, tokenize=False, enable_thinking=False)
-        masked_tokens = tokenizer(masked_str, return_tensors=None, add_special_tokens=False, padding=False)["input_ids"]
+        masked_str = tokenizer.apply_chat_template(
+            masked_turns, tokenize=False, enable_thinking=False
+        )
+        masked_tokens = _unwrap_token_ids(
+            tokenizer(
+                masked_str, return_tensors=None, add_special_tokens=False, padding=False
+            )
+        )
     else:
         masked_tokens = []
 
@@ -120,12 +143,17 @@ def create_latentqa_training_datapoint(
         add_generation_prompt = True
 
     full_read_str = tokenizer.apply_chat_template(
-        datapoint.read_prompt, tokenize=False, add_generation_prompt=add_generation_prompt, enable_thinking=False
+        read_prompt_dicts,
+        tokenize=False,
+        add_generation_prompt=add_generation_prompt,
+        enable_thinking=False,
     )
 
-    context_input_ids = tokenizer(full_read_str, return_tensors=None, add_special_tokens=False, padding=False)[
-        "input_ids"
-    ]
+    context_input_ids = _unwrap_token_ids(
+        tokenizer(
+            full_read_str, return_tensors=None, add_special_tokens=False, padding=False
+        )
+    )
 
     context_positions = list(range(len(context_input_ids)))
     context_positions = context_positions[len(masked_tokens) :]
@@ -133,9 +161,13 @@ def create_latentqa_training_datapoint(
     positions = random.choice(dataset_params.position_types)
 
     if positions == "window":
-        window_size = random.randint(dataset_params.min_window_size, dataset_params.max_window_size)
+        window_size = random.randint(
+            dataset_params.min_window_size, dataset_params.max_window_size
+        )
 
-        end_offset = random.randint(dataset_params.max_end_offset, dataset_params.min_end_offset)
+        end_offset = random.randint(
+            dataset_params.max_end_offset, dataset_params.min_end_offset
+        )
         assert end_offset < 0, "end_offset must be negative"
 
         if abs(end_offset) > len(context_positions):
@@ -166,7 +198,9 @@ def create_latentqa_training_datapoint(
 
 if __name__ == "__main__":
     model_name = "Qwen/Qwen3-8B"
-    config = DatasetLoaderConfig(LatentQADatasetConfig(), 100_000, 0, ["train"], model_name, [50], False)
+    config = DatasetLoaderConfig(
+        LatentQADatasetConfig(), 100_000, 0, ["train"], model_name, [50], False
+    )
 
     tokenizer = AutoTokenizer.from_pretrained(model_name)
 

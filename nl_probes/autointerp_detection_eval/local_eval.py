@@ -61,9 +61,18 @@ def load_eval_data(
     sae_info: SAEInfo,
     tokenizer: PreTrainedTokenizer,
 ) -> list[lightweight_sft.TrainingDataPoint]:
-    sae = load_sae(sae_info.sae_repo_id, sae_info.sae_filename, sae_info.sae_layer, cfg.model_name, device, dtype)
+    sae = load_sae(
+        sae_info.sae_repo_id,
+        sae_info.sae_filename,
+        sae_info.sae_layer,
+        cfg.model_name,
+        device,
+        dtype,
+    )
 
-    train_eval_prompt = lightweight_sft.build_training_prompt(cfg.positive_negative_examples, sae_info.sae_layer)
+    train_eval_prompt = lightweight_sft.build_training_prompt(
+        cfg.positive_negative_examples, sae_info.sae_layer
+    )
 
     eval_data = lightweight_sft.construct_eval_dataset(
         cfg,
@@ -78,7 +87,9 @@ def load_eval_data(
     return eval_data
 
 
-def create_sae_train_test_eval_data(sae: SAEV2) -> eval_detection_v2.SAETrainTest | None:
+def create_sae_train_test_eval_data(
+    sae: SAEV2,
+) -> eval_detection_v2.SAETrainTest | None:
     # Sample deterministically from test_target_activating_sentences using SAE ID as seed
     sampled_test_sentences = 5
     return eval_detection_v2.SAETrainTest.from_sae(
@@ -93,9 +104,14 @@ def create_sae_train_test_eval_data(sae: SAEV2) -> eval_detection_v2.SAETrainTes
 
 
 def create_detection_eval_data(
-    eval_data_file: str, eval_data_start_index: int, sae_ids: list[int], cfg: lightweight_sft.SelfInterpTrainingConfig
+    eval_data_file: str,
+    eval_data_start_index: int,
+    sae_ids: list[int],
+    cfg: lightweight_sft.SelfInterpTrainingConfig,
 ) -> tuple[list[eval_detection_v2.SAETrainTest], SAEInfo]:
-    sae_hard_negatives = eval_detection_v2.read_sae_file(eval_data_file, start_index=eval_data_start_index, limit=500)
+    sae_hard_negatives = eval_detection_v2.read_sae_file(
+        eval_data_file, start_index=eval_data_start_index, limit=500
+    )
     sae_info = sae_hard_negatives[0].sae_info
 
     for sae_hard_negative in sae_hard_negatives:
@@ -167,7 +183,9 @@ cfg = lightweight_sft.SelfInterpTrainingConfig(
 
 layer_percent = 50
 
-eval_detection_data_file = f"data/qwen_hard_negatives_50000_50600_layer_percent_{layer_percent}.jsonl"
+eval_detection_data_file = (
+    f"data/qwen_hard_negatives_50000_50600_layer_percent_{layer_percent}.jsonl"
+)
 
 eval_sae_ids = list(range(50_000, 50_000 + 500))
 
@@ -177,7 +195,9 @@ device = torch.device("cuda")
 dtype = torch.bfloat16
 
 start_index = 0
-all_detection_data, sae_info = create_detection_eval_data(eval_detection_data_file, start_index, eval_sae_ids, cfg)
+all_detection_data, sae_info = create_detection_eval_data(
+    eval_detection_data_file, start_index, eval_sae_ids, cfg
+)
 
 eval_sae_ids = [data.sae_id for data in all_detection_data]
 
@@ -208,7 +228,9 @@ model = load_model(model_name, dtype)
 lora_path = "thejaminator/5e6_lr_14sep_bigger_batch_step_187"
 adapter_name = lora_path
 
-model.load_adapter(lora_path, adapter_name=adapter_name, is_trainable=False, low_cpu_mem_usage=True)
+model.load_adapter(
+    lora_path, adapter_name=adapter_name, is_trainable=False, low_cpu_mem_usage=True
+)
 model.set_adapter(adapter_name)
 
 # %%
@@ -239,7 +261,9 @@ print(eval_results[0].api_response, eval_results[0].feature_idx)
 print(all_detection_data[0].sae_id)
 
 sae_layer = sae_info.sae_layer
-train_eval_prompt = lightweight_sft.build_training_prompt(cfg.positive_negative_examples, sae_layer)
+train_eval_prompt = lightweight_sft.build_training_prompt(
+    cfg.positive_negative_examples, sae_layer
+)
 
 all_detection_prompts: list[eval_detection_v2.SAETrainTestWithExplanation] = []
 
@@ -318,7 +342,9 @@ print("\n" + "=" * 50)
 print("EVALUATION RESULTS BY MODEL")
 print("=" * 50)
 
-avg_precision = evaluation_results.map(lambda x: x.precision).sum() / len(evaluation_results)
+avg_precision = evaluation_results.map(lambda x: x.precision).sum() / len(
+    evaluation_results
+)
 avg_recall = evaluation_results.map(lambda x: x.recall).sum() / len(evaluation_results)
 avg_f1 = evaluation_results.map(lambda x: x.f1_score).sum() / len(evaluation_results)
 

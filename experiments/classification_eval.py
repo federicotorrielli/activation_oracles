@@ -92,7 +92,11 @@ print(f"Using device={device}, dtype={dtype}")
 # Dataset selection
 MAIN_TEST_SIZE = 250
 CLASSIFICATION_DATASETS: dict[str, dict[str, Any]] = {
-    "geometry_of_truth": {"num_train": 0, "num_test": MAIN_TEST_SIZE, "splits": ["test"]},
+    "geometry_of_truth": {
+        "num_train": 0,
+        "num_test": MAIN_TEST_SIZE,
+        "splits": ["test"],
+    },
     "relations": {"num_train": 0, "num_test": MAIN_TEST_SIZE, "splits": ["test"]},
     "sst2": {"num_train": 0, "num_test": MAIN_TEST_SIZE, "splits": ["test"]},
     "md_gender": {"num_train": 0, "num_test": MAIN_TEST_SIZE, "splits": ["test"]},
@@ -100,18 +104,34 @@ CLASSIFICATION_DATASETS: dict[str, dict[str, Any]] = {
     "ag_news": {"num_train": 0, "num_test": MAIN_TEST_SIZE, "splits": ["test"]},
     "ner": {"num_train": 0, "num_test": MAIN_TEST_SIZE, "splits": ["test"]},
     "tense": {"num_train": 0, "num_test": MAIN_TEST_SIZE, "splits": ["test"]},
-    "language_identification": {"num_train": 0, "num_test": MAIN_TEST_SIZE, "splits": ["test"]},
+    "language_identification": {
+        "num_train": 0,
+        "num_test": MAIN_TEST_SIZE,
+        "splits": ["test"],
+    },
     "singular_plural": {"num_train": 0, "num_test": MAIN_TEST_SIZE, "splits": ["test"]},
     "engels_headline_istrump": {"num_train": 0, "num_test": 250, "splits": ["test"]},
     "engels_headline_isobama": {"num_train": 0, "num_test": 250, "splits": ["test"]},
     "engels_headline_ischina": {"num_train": 0, "num_test": 250, "splits": ["test"]},
     "engels_hist_fig_ismale": {"num_train": 0, "num_test": 250, "splits": ["test"]},
     "engels_news_class_politics": {"num_train": 0, "num_test": 250, "splits": ["test"]},
-    "engels_wikidata_isjournalist": {"num_train": 0, "num_test": 250, "splits": ["test"]},
+    "engels_wikidata_isjournalist": {
+        "num_train": 0,
+        "num_test": 250,
+        "splits": ["test"],
+    },
     "engels_wikidata_isathlete": {"num_train": 0, "num_test": 250, "splits": ["test"]},
-    "engels_wikidata_ispolitician": {"num_train": 0, "num_test": 250, "splits": ["test"]},
+    "engels_wikidata_ispolitician": {
+        "num_train": 0,
+        "num_test": 250,
+        "splits": ["test"],
+    },
     "engels_wikidata_issinger": {"num_train": 0, "num_test": 250, "splits": ["test"]},
-    "engels_wikidata_isresearcher": {"num_train": 0, "num_test": 250, "splits": ["test"]},
+    "engels_wikidata_isresearcher": {
+        "num_train": 0,
+        "num_test": 250,
+        "splits": ["test"],
+    },
 }
 
 # Layer percent settings - will iterate over these individually
@@ -195,7 +215,9 @@ def load_datasets_for_layer_percent(
             batch_size=ds_batch_size,
         )
         classification_dataset_loaders.append(
-            ClassificationDatasetLoader(dataset_config=dataset_config, model_kwargs=model_kwargs, model=model)
+            ClassificationDatasetLoader(
+                dataset_config=dataset_config, model_kwargs=model_kwargs, model=model
+            )
         )
 
     # Pull test sets for evaluation
@@ -316,7 +338,9 @@ for model_name in MODEL_CONFIGS:
         os.makedirs(run_dir, exist_ok=True)
 
         # Load datasets for this layer percent (reuses the loaded model)
-        all_eval_data = load_datasets_for_layer_percent(model_name, layer_percent, model_kwargs, model=model)
+        all_eval_data = load_datasets_for_layer_percent(
+            model_name, layer_percent, model_kwargs, model=model
+        )
         print(f"Loaded datasets: {list(all_eval_data.keys())}")
 
         output_json_template = f"{run_dir}" + "classification_results_lora_{lora}.json"

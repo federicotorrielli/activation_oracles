@@ -104,14 +104,18 @@ print("We will collect our activations using this prompt")
 print(f"\nThe classification prompt is: {raw_datapoints[0].classification_prompt}")
 print("This will be the prompt to our trained investigator model")
 print(f"\nThe target response is: {raw_datapoints[0].target_response}")
-print("This will be the training target for training, or the correct answer for evaluation")
+print(
+    "This will be the training target for training, or the correct answer for evaluation"
+)
 
 # %%
 
 prompts = []
 for dp in raw_datapoints:
     message = [{"role": "user", "content": dp.classification_prompt}]
-    prompt = tokenizer.apply_chat_template(message, tokenize=False, add_generation_prompt=True, enable_thinking=False)
+    prompt = tokenizer.apply_chat_template(
+        message, tokenize=False, add_generation_prompt=True, enable_thinking=False
+    )
     prompts.append(prompt)
 
 
@@ -137,6 +141,7 @@ print(responses[0].outputs[0].text)
 import difflib
 import re
 import unicodedata
+
 
 def parse_answer(s: str) -> str:
     """Normalize an answer to a simple whitespace separated, ascii lowercase form.

@@ -92,7 +92,9 @@ lora_requests.append(None)
 for i, lora_request in enumerate(lora_requests):
     sampling_params = vllm.SamplingParams(temperature=1.0, max_tokens=100)
 
-    response = vllm_model.generate(formatted_prompts, lora_request=lora_request, sampling_params=sampling_params)
+    response = vllm_model.generate(
+        formatted_prompts, lora_request=lora_request, sampling_params=sampling_params
+    )
 
     print(f"\n\n\nBEGINNING MODEL {i} RESPONSES\n\n\n")
 

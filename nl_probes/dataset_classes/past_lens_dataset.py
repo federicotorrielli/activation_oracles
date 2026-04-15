@@ -13,7 +13,10 @@ from nl_probes.dataset_classes.act_dataset_manager import (
     BaseDatasetConfig,
     DatasetLoaderConfig,
 )
-from nl_probes.utils.activation_utils import collect_activations_multiple_layers, get_hf_submodule
+from nl_probes.utils.activation_utils import (
+    collect_activations_multiple_layers,
+    get_hf_submodule,
+)
 from nl_probes.utils.common import layer_percent_to_layer, load_model, load_tokenizer
 from nl_probes.utils.dataset_utils import (
     TrainingDataPoint,
@@ -37,14 +40,22 @@ class PastLensDatasetLoader(ActDatasetLoader):
         dataset_config: DatasetLoaderConfig,
     ):
         super().__init__(dataset_config)
-        assert self.dataset_config.dataset_name == "", "Dataset name gets overridden here"
+        assert self.dataset_config.dataset_name == "", (
+            "Dataset name gets overridden here"
+        )
 
         self.dataset_config.dataset_name = "past_lens"
 
-        self.dataset_params: PastLensDatasetConfig = dataset_config.custom_dataset_params
+        self.dataset_params: PastLensDatasetConfig = (
+            dataset_config.custom_dataset_params
+        )
 
-        assert self.dataset_config.splits == ["train"], "Past lens dataset only supports train split right now"
-        assert self.dataset_config.num_test == 0, "Past lens dataset only supports train split right now"
+        assert self.dataset_config.splits == ["train"], (
+            "Past lens dataset only supports train split right now"
+        )
+        assert self.dataset_config.num_test == 0, (
+            "Past lens dataset only supports train split right now"
+        )
 
         if self.dataset_config.num_train < self.dataset_config.batch_size:
             raise ValueError(
@@ -160,7 +171,9 @@ def hf_mixed_dataset_to_generator(
                     samples = "".join(samples)
                     yield samples
                 else:
-                    sample = tokenizer.apply_chat_template(next(chat_ds)[chat_key], tokenize=False)
+                    sample = tokenizer.apply_chat_template(
+                        next(chat_ds)[chat_key], tokenize=False
+                    )
                     yield sample
 
     return gen()
@@ -190,7 +203,10 @@ def collect_past_lens_acts(
 
     training_data = []
 
-    for i in tqdm(range(0, num_datapoints, dataset_config.batch_size), desc="Collecting past lens acts"):
+    for i in tqdm(
+        range(0, num_datapoints, dataset_config.batch_size),
+        desc="Collecting past lens acts",
+    ):
         inputs = []
         for _ in range(dataset_config.batch_size):
             inputs.append(next(dataset))
@@ -219,9 +235,13 @@ def collect_past_lens_acts(
                 L = len(input_ids_L_full)
 
                 # Number of tokens to predict (before or after), and number of activation positions
-                k_tokens = random.randint(custom_dataset_params.min_k_tokens, custom_dataset_params.max_k_tokens)
+                k_tokens = random.randint(
+                    custom_dataset_params.min_k_tokens,
+                    custom_dataset_params.max_k_tokens,
+                )
                 k_acts = random.randint(
-                    custom_dataset_params.min_k_activations, custom_dataset_params.max_k_activations
+                    custom_dataset_params.min_k_activations,
+                    custom_dataset_params.max_k_activations,
                 )
 
                 # Randomly choose direction per example
@@ -238,13 +258,21 @@ def collect_past_lens_acts(
                     act_begin_max = L - k_acts - 1
                     if act_begin_max < act_begin_min:
                         continue
-                    selected_act_begin_idx = random.randint(act_begin_min, act_begin_max)
-                    selected_act_positions = list(range(selected_act_begin_idx, selected_act_begin_idx + k_acts))
-                    selected_tokens_positions = list(range(selected_act_begin_idx - k_tokens, selected_act_begin_idx))
+                    selected_act_begin_idx = random.randint(
+                        act_begin_min, act_begin_max
+                    )
+                    selected_act_positions = list(
+                        range(selected_act_begin_idx, selected_act_begin_idx + k_acts)
+                    )
+                    selected_tokens_positions = list(
+                        range(selected_act_begin_idx - k_tokens, selected_act_begin_idx)
+                    )
                     # Context only needs to include up through the last act position
                     context_cutoff = selected_act_positions[-1]
                     target_tokens = input_ids_L_full[selected_tokens_positions]
-                    target_text = tokenizer.decode(target_tokens, skip_special_tokens=True)
+                    target_text = tokenizer.decode(
+                        target_tokens, skip_special_tokens=True
+                    )
                     prompt = f"Can you predict the previous {k_tokens} tokens that came before this?"
                 else:  # direction == "future"
                     # Need at least 1 token before the act span and k_tokens after the act span
@@ -254,14 +282,22 @@ def collect_past_lens_acts(
                     act_begin_max = L - k_acts - k_tokens
                     if act_begin_max < act_begin_min:
                         continue
-                    selected_act_begin_idx = random.randint(act_begin_min, act_begin_max)
-                    selected_act_positions = list(range(selected_act_begin_idx, selected_act_begin_idx + k_acts))
+                    selected_act_begin_idx = random.randint(
+                        act_begin_min, act_begin_max
+                    )
+                    selected_act_positions = list(
+                        range(selected_act_begin_idx, selected_act_begin_idx + k_acts)
+                    )
                     last_act_pos = selected_act_positions[-1]
-                    selected_tokens_positions = list(range(last_act_pos + 1, last_act_pos + 1 + k_tokens))
+                    selected_tokens_positions = list(
+                        range(last_act_pos + 1, last_act_pos + 1 + k_tokens)
+                    )
                     # Context only needs to include up through the last act position
                     context_cutoff = last_act_pos
                     target_tokens = input_ids_L_full[selected_tokens_positions]
-                    target_text = tokenizer.decode(target_tokens, skip_special_tokens=True)
+                    target_text = tokenizer.decode(
+                        target_tokens, skip_special_tokens=True
+                    )
                     prompt = f"Can you predict the next {k_tokens} tokens that come after this?"
 
                 # Slice context input ids to what is needed to compute acts (up through last act pos)

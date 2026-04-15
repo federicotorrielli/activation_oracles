@@ -106,7 +106,9 @@ def load_knowledge_eval_results(folder_path, verbose=False):
     if base_model_file.exists():
         with open(base_model_file, "r") as f:
             data = json.load(f)
-        accuracy = data.get("overall_accuracy", 0.0) / 100.0  # Convert from percentage to decimal
+        accuracy = (
+            data.get("overall_accuracy", 0.0) / 100.0
+        )  # Convert from percentage to decimal
         count = data.get("total_count", 0)
         error_margin = calculate_binomial_ci(accuracy, count)
         results["base_model"] = {
@@ -125,7 +127,9 @@ def load_knowledge_eval_results(folder_path, verbose=False):
     if personaqa_lora_file.exists():
         with open(personaqa_lora_file, "r") as f:
             data = json.load(f)
-        accuracy = data.get("overall_accuracy", 0.0) / 100.0  # Convert from percentage to decimal
+        accuracy = (
+            data.get("overall_accuracy", 0.0) / 100.0
+        )  # Convert from percentage to decimal
         count = data.get("total_count", 0)
         error_margin = calculate_binomial_ci(accuracy, count)
         results["personaqa_lora"] = {
@@ -174,7 +178,14 @@ def _plot_results_panel(
 ):
     """Plot a single panel with bars using shared palette."""
     colors = [palette[label] for label in labels]
-    bars = ax.bar(range(len(names)), means, color=colors, yerr=error_bars, capsize=5, error_kw={"linewidth": 2})
+    bars = ax.bar(
+        range(len(names)),
+        means,
+        color=colors,
+        yerr=error_bars,
+        capsize=5,
+        error_kw={"linewidth": 2},
+    )
     # Style the highlighted bar (personaqa_lora, index 1)
     if len(bars) > 1:
         _style_highlight(bars[1], color=bars[1].get_facecolor())
@@ -214,7 +225,9 @@ def plot_all_models(all_results, model_names, output_path_base, is_yes_no=False)
 
     # Add figure title if enabled
     if ADD_FIGURE_TITLES:
-        figure_title = "Yes / No Knowledge Eval" if is_yes_no else "Open-Ended Knowledge Eval"
+        figure_title = (
+            "Yes / No Knowledge Eval" if is_yes_no else "Open-Ended Knowledge Eval"
+        )
         fig.suptitle(figure_title, fontsize=FONT_SIZE_SUBPLOT_TITLE + 2, y=1.02)
 
     # Collect stats for each model
@@ -259,7 +272,14 @@ def plot_all_models(all_results, model_names, output_path_base, is_yes_no=False)
         zip(all_names, all_labels, all_means, all_errors, model_names)
     ):
         _plot_results_panel(
-            axes[idx], names, labels, means, errors, title=model_name, palette=shared_palette, show_ylabel=(idx == 0)
+            axes[idx],
+            names,
+            labels,
+            means,
+            errors,
+            title=model_name,
+            palette=shared_palette,
+            show_ylabel=(idx == 0),
         )
 
     # Add random chance baseline to all subplots (only for yes/no)
@@ -272,15 +292,26 @@ def plot_all_models(all_results, model_names, output_path_base, is_yes_no=False)
     if "PersonAQA LoRA" in unique_labels:
         highlight_labels.append("PersonAQA LoRA")
     other_labels = sorted([lab for lab in unique_labels if lab not in highlight_labels])
-    ordered_labels = highlight_labels + other_labels if highlight_labels else unique_labels
+    ordered_labels = (
+        highlight_labels + other_labels if highlight_labels else unique_labels
+    )
 
     handles = []
     for lab in ordered_labels:
-        handles.append(Patch(facecolor=shared_palette[lab], edgecolor="black", label=lab))
+        handles.append(
+            Patch(facecolor=shared_palette[lab], edgecolor="black", label=lab)
+        )
 
     # Add baseline to legend (only for yes/no)
     if is_yes_no:
-        baseline_handle = Line2D([0], [0], color="red", linestyle="--", linewidth=2, label="Random Chance Baseline")
+        baseline_handle = Line2D(
+            [0],
+            [0],
+            color="red",
+            linestyle="--",
+            linewidth=2,
+            label="Random Chance Baseline",
+        )
         handles.append(baseline_handle)
 
     # Adjust legend position: move down more for yes/no (has baseline), less for open-ended
@@ -304,7 +335,9 @@ def main():
     # Iterate over task types
     for task_type in TASK_TYPES:
         is_yes_no = task_type == "knowledge_yes_no_eval"
-        task_display = "Yes / No Knowledge Eval" if is_yes_no else "Open-Ended Knowledge Eval"
+        task_display = (
+            "Yes / No Knowledge Eval" if is_yes_no else "Open-Ended Knowledge Eval"
+        )
 
         print(f"\n{'=' * 60}")
         print(f"Processing {task_display}...")
@@ -322,7 +355,9 @@ def main():
             print()
 
         if not any(all_results):
-            print(f"No results found in any of the specified folders for {task_display}!")
+            print(
+                f"No results found in any of the specified folders for {task_display}!"
+            )
             continue
 
         # Construct output path

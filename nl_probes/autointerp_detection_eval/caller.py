@@ -49,7 +49,9 @@ class ChatMessage(BaseModel):
                     {"type": "text", "text": self.content},
                     {
                         "type": "image_url",
-                        "image_url": {"url": f"data:{self.image_type};base64,{self.image_content}"},
+                        "image_url": {
+                            "url": f"data:{self.image_type};base64,{self.image_content}"
+                        },
                     },
                 ],
             }
@@ -109,7 +111,9 @@ class ChatHistory(BaseModel):
         return ChatHistory(messages=new_messages)
 
     def add_assistant(self, content: str) -> "ChatHistory":
-        new_messages = list(self.messages) + [ChatMessage(role="assistant", content=content)]
+        new_messages = list(self.messages) + [
+            ChatMessage(role="assistant", content=content)
+        ]
         return ChatHistory(messages=new_messages)
 
     def add_messages(self, messages: Sequence[ChatMessage]) -> "ChatHistory":
@@ -195,7 +199,9 @@ class InferenceResponse(BaseModel):
     @property
     def single_response(self) -> str:
         if len(self.raw_responses) != 1:
-            raise ValueError(f"This response has multiple responses {self.raw_responses}")
+            raise ValueError(
+                f"This response has multiple responses {self.raw_responses}"
+            )
         else:
             return self.raw_responses[0]
 
@@ -234,7 +240,9 @@ class ResponseWithLogProbs(BaseModel):
     content: Sequence[TokenWithLogProbs]  #
 
 
-def write_jsonl_file_from_basemodel(path: Path | str, basemodels: Sequence[BaseModel]) -> None:
+def write_jsonl_file_from_basemodel(
+    path: Path | str, basemodels: Sequence[BaseModel]
+) -> None:
     if isinstance(path, str):
         path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -262,7 +270,9 @@ def deterministic_hash(something: str) -> str:
     return hashlib.sha1(something.encode()).hexdigest()
 
 
-def validate_json_item(item: str, model: type[GenericBaseModel]) -> GenericBaseModel | None:
+def validate_json_item(
+    item: str, model: type[GenericBaseModel]
+) -> GenericBaseModel | None:
     try:
         return model.model_validate_json(item)
     except ValidationError:
@@ -314,9 +324,13 @@ class InferenceConfig(BaseModel):
     ) -> "InferenceConfig":
         return InferenceConfig(
             model=self.model,
-            temperature=temperature if not isinstance(temperature, NotGivenSentinel) else self.temperature,
+            temperature=temperature
+            if not isinstance(temperature, NotGivenSentinel)
+            else self.temperature,
             top_p=top_p if not isinstance(top_p, NotGivenSentinel) else self.top_p,
-            max_tokens=max_tokens if not isinstance(max_tokens, NotGivenSentinel) else self.max_tokens,
+            max_tokens=max_tokens
+            if not isinstance(max_tokens, NotGivenSentinel)
+            else self.max_tokens,
             max_completion_tokens=max_completion_tokens
             if not isinstance(max_completion_tokens, NotGivenSentinel)
             else self.max_completion_tokens,
@@ -374,8 +388,12 @@ def file_cache_key(
     tools: ToolArgs | None,
 ) -> str:
     messages_dump = messages.model_dump_json(exclude_none=True)
-    config_dump = config.model_dump_json(exclude_none=True)  # for backwards compatibility
-    tools_json = tools.model_dump_json(exclude_none=True) if tools is not None else ""  # for backwards compatibility
+    config_dump = config.model_dump_json(
+        exclude_none=True
+    )  # for backwards compatibility
+    tools_json = (
+        tools.model_dump_json(exclude_none=True) if tools is not None else ""
+    )  # for backwards compatibility
     _str = messages_dump + config_dump + tools_json + str(try_number) + other_hash
     return deterministic_hash(_str)
 
@@ -384,7 +402,9 @@ async def read_jsonl_file_into_basemodel_async(
     path: AnyioPath, basemodel: type[GenericBaseModel]
 ) -> Slist[GenericBaseModel]:
     async with await anyio.open_file(path, "r") as f:
-        return Slist([basemodel.model_validate_json(line) for line in await f.readlines()])
+        return Slist(
+            [basemodel.model_validate_json(line) for line in await f.readlines()]
+        )
 
 
 class Caller(ABC):
@@ -453,7 +473,9 @@ class APIRequestCache(Generic[GenericBaseModel]):
             time_end = time.time()
             n_items = len(rows)
             time_diff_1dp = round(time_end - time_start, 1)
-            print(f"Loaded {n_items} items from {self.cache_path.as_posix()} in {time_diff_1dp} seconds")
+            print(
+                f"Loaded {n_items} items from {self.cache_path.as_posix()} in {time_diff_1dp} seconds"
+            )
         else:
             rows = Slist()
         for row in rows:
@@ -517,33 +539,48 @@ class APIRequestCache(Generic[GenericBaseModel]):
         if self.file_handler:
             # prevent multiple writes to same file
             async with self.cache_check_semaphore:
-                line = FileCacheRow(key=key, response=response_json).model_dump_json() + "\n"
+                line = (
+                    FileCacheRow(key=key, response=response_json).model_dump_json()
+                    + "\n"
+                )
                 await self.file_handler.write(line)
 
 
 class CallerCache(Generic[GenericBaseModel]):
     """Will create a jsonl cache for each model."""
 
-    def __init__(self, cache_path: Path, cache_type: type[GenericBaseModel] = OpenaiResponse):
+    def __init__(
+        self, cache_path: Path, cache_type: type[GenericBaseModel] = OpenaiResponse
+    ):
         self.cache_path = Path(cache_path)
         # if not exists, create it
         if not self.cache_path.exists():
             self.cache_path.mkdir(parents=True)
-        assert self.cache_path.is_dir(), f"cache_path must be a folder, you provided {cache_path}"
+        assert self.cache_path.is_dir(), (
+            f"cache_path must be a folder, you provided {cache_path}"
+        )
         self.cache: dict[str, APIRequestCache[GenericBaseModel]] = {}
-        self.log_probs_cache: dict[str, APIRequestCache[OpenaiResponseWithLogProbs]] = {}
+        self.log_probs_cache: dict[
+            str, APIRequestCache[OpenaiResponseWithLogProbs]
+        ] = {}
         self.cache_type = cache_type
 
     def get_cache(self, model: str) -> APIRequestCache[GenericBaseModel]:
         if model not in self.cache:
             path = self.cache_path / f"{model}.jsonl"
-            self.cache[model] = APIRequestCache(cache_path=path, response_type=self.cache_type)
+            self.cache[model] = APIRequestCache(
+                cache_path=path, response_type=self.cache_type
+            )
         return self.cache[model]
 
-    def get_log_probs_cache(self, model: str) -> APIRequestCache[OpenaiResponseWithLogProbs]:
+    def get_log_probs_cache(
+        self, model: str
+    ) -> APIRequestCache[OpenaiResponseWithLogProbs]:
         if model not in self.log_probs_cache:
             path = self.cache_path / f"{model}_log_probs.jsonl"
-            self.log_probs_cache[model] = APIRequestCache(cache_path=path, response_type=OpenaiResponseWithLogProbs)
+            self.log_probs_cache[model] = APIRequestCache(
+                cache_path=path, response_type=OpenaiResponseWithLogProbs
+            )
         return self.log_probs_cache[model]
 
     async def flush(self) -> None:
@@ -573,7 +610,11 @@ class OpenAICaller(Caller):
                 )
                 api_key = env_key
             self.client = AsyncOpenAI(api_key=api_key, organization=organization)
-        self.cache_by_model = CallerCache(Path(cache_path)) if not isinstance(cache_path, CallerCache) else cache_path
+        self.cache_by_model = (
+            CallerCache(Path(cache_path))
+            if not isinstance(cache_path, CallerCache)
+            else cache_path
+        )
 
     async def flush(self) -> None:
         await self.cache_by_model.flush()
@@ -581,7 +622,9 @@ class OpenAICaller(Caller):
     def get_cache(self, model: str) -> APIRequestCache[OpenaiResponse]:
         return self.cache_by_model.get_cache(model)
 
-    def get_log_probs_cache(self, model: str) -> APIRequestCache[OpenaiResponseWithLogProbs]:
+    def get_log_probs_cache(
+        self, model: str
+    ) -> APIRequestCache[OpenaiResponseWithLogProbs]:
         return self.cache_by_model.get_log_probs_cache(model)
 
     @retry(
@@ -600,7 +643,11 @@ class OpenAICaller(Caller):
     @retry(
         stop=(stop_after_attempt(10)),
         wait=(wait_fixed(30)),  # for rate limits, wait longer
-        retry=(retry_if_exception_type((openai.RateLimitError, openai.PermissionDeniedError))),
+        retry=(
+            retry_if_exception_type(
+                (openai.RateLimitError, openai.PermissionDeniedError)
+            )
+        ),
         reraise=True,
         after=lambda retry_state: print(
             f"Rate limit or permission error, retrying attempt {retry_state.attempt_number}/10..."
@@ -613,12 +660,14 @@ class OpenAICaller(Caller):
         try_number: int = 1,
         tool_args: ToolArgs | None = None,
     ) -> OpenaiResponse:
-        maybe_result: OpenaiResponse | None = await self.get_cache(config.model).get_model_call(
-            messages, config, try_number, tool_args
-        )
+        maybe_result: OpenaiResponse | None = await self.get_cache(
+            config.model
+        ).get_model_call(messages, config, try_number, tool_args)
         if maybe_result is not None:
             if "content_error" in maybe_result.choices[0]:
-                raise ContentPolicyError(maybe_result.choices[0]["content_error"]["message"])
+                raise ContentPolicyError(
+                    maybe_result.choices[0]["content_error"]["message"]
+                )
             return maybe_result
 
         assert len(messages.messages) > 0, "Messages must be non-empty"
@@ -632,13 +681,21 @@ class OpenAICaller(Caller):
             chat_completion = await self.client.chat.completions.create(
                 model=config.model,
                 messages=[msg.to_openai_content() for msg in messages.messages],  # type: ignore
-                temperature=config.temperature if config.temperature is not None else NOT_GIVEN,
-                max_tokens=config.max_tokens if config.max_tokens is not None else NOT_GIVEN,
+                temperature=config.temperature
+                if config.temperature is not None
+                else NOT_GIVEN,
+                max_tokens=config.max_tokens
+                if config.max_tokens is not None
+                else NOT_GIVEN,
                 max_completion_tokens=(
-                    config.max_completion_tokens if config.max_completion_tokens is not None else NOT_GIVEN
+                    config.max_completion_tokens
+                    if config.max_completion_tokens is not None
+                    else NOT_GIVEN
                 ),
                 top_p=config.top_p if config.top_p is not None else NOT_GIVEN,
-                frequency_penalty=config.frequency_penalty if config.frequency_penalty != 0.0 else NOT_GIVEN,
+                frequency_penalty=config.frequency_penalty
+                if config.frequency_penalty != 0.0
+                else NOT_GIVEN,
                 tools=tool_args.tools if tool_args is not None else NOT_GIVEN,  # type: ignore
                 extra_body=extra_body or None,
                 timeout=1200,
@@ -653,7 +710,14 @@ class OpenAICaller(Caller):
                     try_number=try_number,
                     response=OpenaiResponse(
                         id=None,
-                        choices=[{"content_error": {"message": e.message, "type": "content_policy_violation"}}],
+                        choices=[
+                            {
+                                "content_error": {
+                                    "message": e.message,
+                                    "type": "content_policy_violation",
+                                }
+                            }
+                        ],
                         created=0,
                         model=config.model,
                         usage={},
@@ -694,7 +758,14 @@ class OpenAICaller(Caller):
         stop=(stop_after_attempt(5)),
         wait=(wait_fixed(5)),
         retry=(
-            retry_if_exception_type((ValidationError, JSONDecodeError, openai.RateLimitError, openai.APITimeoutError))
+            retry_if_exception_type(
+                (
+                    ValidationError,
+                    JSONDecodeError,
+                    openai.RateLimitError,
+                    openai.APITimeoutError,
+                )
+            )
         ),
         reraise=True,
     )
@@ -706,25 +777,37 @@ class OpenAICaller(Caller):
         try_number: int = 1,
         tool_args: ToolArgs | None = None,
     ) -> GenericBaseModel:
-        maybe_result = await self.get_cache(config.model).get_model_call(messages, config, try_number, tool_args)
+        maybe_result = await self.get_cache(config.model).get_model_call(
+            messages, config, try_number, tool_args
+        )
         if maybe_result is not None:
             if "content_error" in maybe_result.choices[0]:
-                raise ContentPolicyError(maybe_result.choices[0]["content_error"]["message"])
+                raise ContentPolicyError(
+                    maybe_result.choices[0]["content_error"]["message"]
+                )
             return schema.model_validate_json(maybe_result.first_response)
         try:
             chat_completion = await self.client.beta.chat.completions.parse(
                 model=config.model,
                 messages=[msg.to_openai_content() for msg in messages.messages],  # type: ignore
-                temperature=config.temperature if config.temperature is not None else NOT_GIVEN,
-                max_tokens=config.max_tokens if config.max_tokens is not None else NOT_GIVEN,
+                temperature=config.temperature
+                if config.temperature is not None
+                else NOT_GIVEN,
+                max_tokens=config.max_tokens
+                if config.max_tokens is not None
+                else NOT_GIVEN,
                 max_completion_tokens=config.max_completion_tokens
                 if config.max_completion_tokens is not None
                 else NOT_GIVEN,
                 top_p=config.top_p if config.top_p is not None else NOT_GIVEN,
-                frequency_penalty=config.frequency_penalty if config.frequency_penalty is not None else NOT_GIVEN,
+                frequency_penalty=config.frequency_penalty
+                if config.frequency_penalty is not None
+                else NOT_GIVEN,
                 response_format=schema,
                 extra_body=config.extra_body or {},
-                reasoning_effort=config.reasoning_effort if config.reasoning_effort is not None else NOT_GIVEN,  # type: ignore
+                reasoning_effort=config.reasoning_effort
+                if config.reasoning_effort is not None
+                else NOT_GIVEN,  # type: ignore
             )
         except openai.BadRequestError as e:
             if "limited access to this content for safety reasons." in e.message:
@@ -735,7 +818,14 @@ class OpenAICaller(Caller):
                     try_number=try_number,
                     response=OpenaiResponse(
                         id=None,
-                        choices=[{"content_error": {"message": e.message, "type": "content_policy_violation"}}],
+                        choices=[
+                            {
+                                "content_error": {
+                                    "message": e.message,
+                                    "type": "content_policy_violation",
+                                }
+                            }
+                        ],
                         created=0,
                         model=config.model,
                         usage={},
@@ -748,12 +838,18 @@ class OpenAICaller(Caller):
         except Exception as e:
             api_key = self.client.api_key
             api_domain = self.client.base_url
-            note = f"Model: {config.model}. API key: {api_key}. API domain: {api_domain}"
+            note = (
+                f"Model: {config.model}. API key: {api_key}. API domain: {api_domain}"
+            )
             e.add_note(note)
             raise e
         resp = OpenaiResponse.model_validate(chat_completion.model_dump())
         await self.get_cache(config.model).add_model_call(
-            messages=messages, config=config, try_number=try_number, response=resp, tools=tool_args
+            messages=messages,
+            config=config,
+            try_number=try_number,
+            response=resp,
+            tools=tool_args,
         )
         return chat_completion.choices[0].message.parsed  # type: ignore
 
@@ -766,7 +862,11 @@ class OpenAICaller(Caller):
         tool_args: ToolArgs | None = None,
     ) -> OpenaiResponseWithLogProbs:
         maybe_result = await self.get_log_probs_cache(config.model).get_model_call(
-            messages=messages, config=config, try_number=try_number, tools=tool_args, other_hash=str(top_logprobs)
+            messages=messages,
+            config=config,
+            try_number=try_number,
+            tools=tool_args,
+            other_hash=str(top_logprobs),
         )
         if maybe_result is not None:
             return maybe_result
@@ -774,13 +874,21 @@ class OpenAICaller(Caller):
         result = await self.client.chat.completions.create(  # type: ignore
             model=config.model,
             messages=[msg.to_openai_content() for msg in messages.messages],  # type: ignore
-            temperature=config.temperature if config.temperature is not None else NOT_GIVEN,
-            max_tokens=config.max_tokens if config.max_tokens is not None else NOT_GIVEN,
+            temperature=config.temperature
+            if config.temperature is not None
+            else NOT_GIVEN,
+            max_tokens=config.max_tokens
+            if config.max_tokens is not None
+            else NOT_GIVEN,
             max_completion_tokens=(
-                config.max_completion_tokens if config.max_completion_tokens is not None else NOT_GIVEN
+                config.max_completion_tokens
+                if config.max_completion_tokens is not None
+                else NOT_GIVEN
             ),
             top_p=config.top_p if config.top_p is not None else NOT_GIVEN,
-            frequency_penalty=config.frequency_penalty if config.frequency_penalty != 0.0 else NOT_GIVEN,
+            frequency_penalty=config.frequency_penalty
+            if config.frequency_penalty != 0.0
+            else NOT_GIVEN,
             n=config.n,
             stream=False,
             logprobs=True,
@@ -815,7 +923,11 @@ class AnthropicCaller(Caller):
                 assert env_key is not None, "Please provide an Anthropic API Key"
                 api_key = env_key
             self.client = anthropic.AsyncAnthropic(api_key=api_key)
-        self.cache_by_model = CallerCache(Path(cache_path)) if not isinstance(cache_path, CallerCache) else cache_path
+        self.cache_by_model = (
+            CallerCache(Path(cache_path))
+            if not isinstance(cache_path, CallerCache)
+            else cache_path
+        )
 
     async def flush(self) -> None:
         await self.cache_by_model.flush()
@@ -823,13 +935,17 @@ class AnthropicCaller(Caller):
     def get_cache(self, model: str) -> APIRequestCache[OpenaiResponse]:
         return self.cache_by_model.get_cache(model)
 
-    def get_log_probs_cache(self, model: str) -> APIRequestCache[OpenaiResponseWithLogProbs]:
+    def get_log_probs_cache(
+        self, model: str
+    ) -> APIRequestCache[OpenaiResponseWithLogProbs]:
         return self.cache_by_model.get_log_probs_cache(model)
 
     @retry(
         stop=(stop_after_attempt(5)),
         wait=(wait_fixed(5)),
-        retry=(retry_if_exception_type((ValidationError, anthropic.InternalServerError))),
+        retry=(
+            retry_if_exception_type((ValidationError, anthropic.InternalServerError))
+        ),
         reraise=True,
     )
     async def call(
@@ -840,30 +956,44 @@ class AnthropicCaller(Caller):
         tool_args: ToolArgs | None = None,
     ) -> OpenaiResponse:
         assert tool_args is None, "Anthropic does not support tools"
-        maybe_result = await self.get_cache(config.model).get_model_call(messages, config, try_number, tool_args)
+        maybe_result = await self.get_cache(config.model).get_model_call(
+            messages, config, try_number, tool_args
+        )
         if maybe_result is not None:
             return maybe_result
 
-        non_system, system = Slist(messages.messages).split_by(lambda msg: msg.role != "system")
-        anthropic_messages = [{"role": msg.role, "content": msg.content} for msg in non_system]
+        non_system, system = Slist(messages.messages).split_by(
+            lambda msg: msg.role != "system"
+        )
+        anthropic_messages = [
+            {"role": msg.role, "content": msg.content} for msg in non_system
+        ]
         if system.length >= 2:
             raise ValueError("Anthropic does not support multiple system messages")
         system_message: ChatMessage | None = system.first_option
-        to_pass_sys = system_message.content if system_message is not None else anthropic.NOT_GIVEN
+        to_pass_sys = (
+            system_message.content
+            if system_message is not None
+            else anthropic.NOT_GIVEN
+        )
 
         assert config.max_tokens is not None, "Anthropic requires max_tokens"
         response: Message = await self.client.messages.create(
             model=config.model,
             messages=anthropic_messages,  # type: ignore
             max_tokens=config.max_tokens,
-            temperature=config.temperature if config.temperature is not None else anthropic.NOT_GIVEN,
+            temperature=config.temperature
+            if config.temperature is not None
+            else anthropic.NOT_GIVEN,
             top_p=config.top_p if config.top_p is not None else anthropic.NOT_GIVEN,
             system=to_pass_sys,
         )
         # convert
         openai_response = OpenaiResponse(
             id=response.id,
-            choices=[{"message": {"content": response.content[0].text, "role": "assistant"}}],  # type: ignore
+            choices=[
+                {"message": {"content": response.content[0].text, "role": "assistant"}}
+            ],  # type: ignore
             created=int(datetime.now().timestamp()),
             model=config.model,
             system_fingerprint=None,
@@ -871,7 +1001,11 @@ class AnthropicCaller(Caller):
         )
 
         await self.get_cache(config.model).add_model_call(
-            messages=messages, config=config, try_number=try_number, response=openai_response, tools=tool_args
+            messages=messages,
+            config=config,
+            try_number=try_number,
+            response=openai_response,
+            tools=tool_args,
         )
 
         return openai_response
@@ -920,7 +1054,9 @@ class MultiClientCaller(Caller):
             if caller_config.name in model:
                 return caller_config.caller
         available_patterns = [caller_config.name for caller_config in self.callers]
-        raise ValueError(f"No caller found for model {model}. Available patterns specified: {available_patterns}")
+        raise ValueError(
+            f"No caller found for model {model}. Available patterns specified: {available_patterns}"
+        )
 
     async def call(
         self,
@@ -1022,7 +1158,9 @@ class OpenAIModerateCaller:
 
         if self.cache is not None:
             maybe_result = await self.cache.get_model_call(
-                messages=ChatHistory(messages=[ChatMessage(role="user", content=to_moderate)]),
+                messages=ChatHistory(
+                    messages=[ChatMessage(role="user", content=to_moderate)]
+                ),
                 config=InferenceConfig(model=model),
                 try_number=try_number,
                 tools=None,
@@ -1031,15 +1169,19 @@ class OpenAIModerateCaller:
                 return maybe_result
 
         try:
-            moderation_response: ModerationCreateResponse = await self.client.moderations.create(
-                model=model,
-                input=to_moderate,
+            moderation_response: ModerationCreateResponse = (
+                await self.client.moderations.create(
+                    model=model,
+                    input=to_moderate,
+                )
             )
 
             # add the response to the cache
             if self.cache is not None:
                 await self.cache.add_model_call(
-                    messages=ChatHistory(messages=[ChatMessage(role="user", content=to_moderate)]),
+                    messages=ChatHistory(
+                        messages=[ChatMessage(role="user", content=to_moderate)]
+                    ),
                     config=InferenceConfig(model=model),
                     try_number=try_number,
                     response=moderation_response,
@@ -1136,9 +1278,13 @@ def load_multi_caller(cache_path: str) -> MultiClientCaller:
     assert openai_api_key, "Please provide an OpenAI API Key"
     assert openrouter_api_key, "Please provide an OpenRouter API Key"
     shared_cache = CallerCache(Path(cache_path))
-    openai_caller = OpenAICaller(api_key=openai_api_key, organization=openai_org, cache_path=shared_cache)
+    openai_caller = OpenAICaller(
+        api_key=openai_api_key, organization=openai_org, cache_path=shared_cache
+    )
     openrouter_caller = OpenAICaller(
-        openai_client=AsyncOpenAI(api_key=openrouter_api_key, base_url="https://openrouter.ai/api/v1"),
+        openai_client=AsyncOpenAI(
+            api_key=openrouter_api_key, base_url="https://openrouter.ai/api/v1"
+        ),
         cache_path=shared_cache,
     )
 
@@ -1161,10 +1307,14 @@ def load_multi_caller(cache_path: str) -> MultiClientCaller:
 def load_pooled_openai_caller(cache_path: str) -> PooledCaller:
     load_dotenv()
     openai_api_keys = os.getenv("OPENAI_API_KEYS", "").split(",")
-    assert len(openai_api_keys) > 0, "Please set the OPENAI_API_KEYS environment variable"
+    assert len(openai_api_keys) > 0, (
+        "Please set the OPENAI_API_KEYS environment variable"
+    )
     print(f"Using {len(openai_api_keys)} OpenAI API Keys")
     shared_cache = CallerCache(Path(cache_path))
-    openai_clients = [OpenAICaller(api_key=key, cache_path=shared_cache) for key in openai_api_keys]
+    openai_clients = [
+        OpenAICaller(api_key=key, cache_path=shared_cache) for key in openai_api_keys
+    ]
     return PooledCaller(openai_clients)
 
 

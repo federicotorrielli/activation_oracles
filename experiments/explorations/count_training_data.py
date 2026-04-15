@@ -12,13 +12,22 @@ from typing import Any
 import torch
 
 # Minimal imports - avoid loading models
-from nl_probes.dataset_classes.act_dataset_manager import ActDatasetLoader, DatasetLoaderConfig
+from nl_probes.dataset_classes.act_dataset_manager import (
+    ActDatasetLoader,
+    DatasetLoaderConfig,
+)
 from nl_probes.dataset_classes.classification import (
     ClassificationDatasetConfig,
     ClassificationDatasetLoader,
 )
-from nl_probes.dataset_classes.latentqa_dataset import LatentQADatasetConfig, LatentQADatasetLoader
-from nl_probes.dataset_classes.past_lens_dataset import PastLensDatasetConfig, PastLensDatasetLoader
+from nl_probes.dataset_classes.latentqa_dataset import (
+    LatentQADatasetConfig,
+    LatentQADatasetLoader,
+)
+from nl_probes.dataset_classes.past_lens_dataset import (
+    PastLensDatasetConfig,
+    PastLensDatasetLoader,
+)
 from nl_probes.utils.dataset_utils import TrainingDataPoint
 
 
@@ -169,7 +178,9 @@ def build_loader_groups_no_model(
     }
 
 
-def load_training_data_only(dataset_loaders: list[ActDatasetLoader]) -> list[TrainingDataPoint]:
+def load_training_data_only(
+    dataset_loaders: list[ActDatasetLoader],
+) -> list[TrainingDataPoint]:
     """Load only training data from existing dataset files."""
     all_training_data: list[TrainingDataPoint] = []
 
@@ -177,7 +188,9 @@ def load_training_data_only(dataset_loaders: list[ActDatasetLoader]) -> list[Tra
         if "train" in dataset_loader.dataset_config.splits:
             # Check if file exists before trying to load
             filename = dataset_loader.get_dataset_filename("train")
-            filepath = os.path.join(dataset_loader.dataset_config.dataset_folder, filename)
+            filepath = os.path.join(
+                dataset_loader.dataset_config.dataset_folder, filename
+            )
 
             if not os.path.exists(filepath):
                 print(f"WARNING: Training data file does not exist: {filepath}")
@@ -258,7 +271,11 @@ def main():
             "num_test": main_test_size,
             "splits": ["train", "test"],
         },
-        "ag_news": {"num_train": main_train_size, "num_test": main_test_size, "splits": ["test"]},
+        "ag_news": {
+            "num_train": main_train_size,
+            "num_test": main_test_size,
+            "splits": ["test"],
+        },
         "ner": {
             "num_train": main_train_size,
             "num_test": main_test_size,
@@ -275,7 +292,11 @@ def main():
             "splits": ["test"],
             "batch_size": 4,
         },
-        "singular_plural": {"num_train": 0, "num_test": main_test_size, "splits": ["test"]},
+        "singular_plural": {
+            "num_train": 0,
+            "num_test": main_test_size,
+            "splits": ["test"],
+        },
     }
 
     layer_percents = [25, 50, 75]

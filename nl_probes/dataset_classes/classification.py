@@ -12,7 +12,11 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 
 import nl_probes.dataset_classes.classification_dataset_manager as classification_dataset_manager
 from nl_probes.utils.steering_hooks import add_hook, get_hf_activation_steering_hook
-from nl_probes.dataset_classes.act_dataset_manager import ActDatasetLoader, BaseDatasetConfig, DatasetLoaderConfig
+from nl_probes.dataset_classes.act_dataset_manager import (
+    ActDatasetLoader,
+    BaseDatasetConfig,
+    DatasetLoaderConfig,
+)
 from nl_probes.utils.activation_utils import (
     collect_activations_multiple_layers,
     get_hf_submodule,
@@ -41,14 +45,25 @@ class ClassificationDatasetConfig(BaseDatasetConfig):
 
 
 class ClassificationDatasetLoader(ActDatasetLoader):
-    def __init__(self, dataset_config: DatasetLoaderConfig, model_kwargs: dict[str, Any] | None = None, model=None):
+    def __init__(
+        self,
+        dataset_config: DatasetLoaderConfig,
+        model_kwargs: dict[str, Any] | None = None,
+        model=None,
+    ):
         super().__init__(dataset_config)
 
-        self.dataset_params: ClassificationDatasetConfig = dataset_config.custom_dataset_params
+        self.dataset_params: ClassificationDatasetConfig = (
+            dataset_config.custom_dataset_params
+        )
 
-        assert self.dataset_config.dataset_name == "", "Classification dataset name gets overridden here"
+        assert self.dataset_config.dataset_name == "", (
+            "Classification dataset name gets overridden here"
+        )
 
-        self.dataset_config.dataset_name = f"classification_{self.dataset_params.classification_dataset_name}"
+        self.dataset_config.dataset_name = (
+            f"classification_{self.dataset_params.classification_dataset_name}"
+        )
         self.model_kwargs = model_kwargs
         self.model = model
 
@@ -59,10 +74,12 @@ class ClassificationDatasetLoader(ActDatasetLoader):
 
         assert self.dataset_params.min_end_offset < 0, "Min end offset must be negative"
         assert self.dataset_params.max_end_offset < 0, "Max end offset must be negative"
-        assert self.dataset_params.max_end_offset <= self.dataset_params.min_end_offset, (
-            "Max end offset must be less than or equal to min end offset"
+        assert (
+            self.dataset_params.max_end_offset <= self.dataset_params.min_end_offset
+        ), "Max end offset must be less than or equal to min end offset"
+        assert self.dataset_params.max_window_size > 0, (
+            "Max window size must be positive"
         )
-        assert self.dataset_params.max_window_size > 0, "Max window size must be positive"
 
     def create_dataset(self) -> None:
         tokenizer = load_tokenizer(self.dataset_config.model_name)
@@ -143,12 +160,18 @@ def get_classification_datapoints(
 
     random.shuffle(all_examples)
 
-    assert len(all_examples) >= train_examples + test_examples, "Not enough examples to split"
+    assert len(all_examples) >= train_examples + test_examples, (
+        "Not enough examples to split"
+    )
     train_examples = all_examples[:train_examples]
     test_examples = all_examples[-test_examples:]
 
-    train_datapoints = get_classification_datapoints_from_context_qa_examples(train_examples)
-    test_datapoints = get_classification_datapoints_from_context_qa_examples(test_examples)
+    train_datapoints = get_classification_datapoints_from_context_qa_examples(
+        train_examples
+    )
+    test_datapoints = get_classification_datapoints_from_context_qa_examples(
+        test_examples
+    )
 
     return train_datapoints, test_datapoints
 
@@ -183,7 +206,9 @@ def create_vector_dataset(
 ) -> list[TrainingDataPoint]:
     assert min_end_offset < 0, "Min end offset must be negative"
     assert max_end_offset < 0, "Max end offset must be negative"
-    assert max_end_offset <= min_end_offset, "Max end offset must be less than or equal to min end offset"
+    assert max_end_offset <= min_end_offset, (
+        "Max end offset must be less than or equal to min end offset"
+    )
     training_data = []
 
     assert tokenizer.padding_side == "left", "Padding side must be left"
@@ -204,8 +229,12 @@ def create_vector_dataset(
         batch_datapoints = datapoints[i : i + batch_size]
         formatted_prompts = []
         for datapoint in batch_datapoints:
-            formatted_prompts.append([{"role": "user", "content": datapoint.activation_prompt}])
-        tokenized_prompts = tokenizer.apply_chat_template(formatted_prompts, tokenize=False)
+            formatted_prompts.append(
+                [{"role": "user", "content": datapoint.activation_prompt}]
+            )
+        tokenized_prompts = tokenizer.apply_chat_template(
+            formatted_prompts, tokenize=False
+        )
         tokenized_prompts = tokenizer(
             tokenized_prompts,
             return_tensors="pt",
@@ -274,7 +303,11 @@ def create_vector_dataset(
 if __name__ == "__main__":
     main_test_size = 250
     classification_datasets = {
-        "geometry_of_truth": {"num_train": 0, "num_test": main_test_size, "splits": ["test"]},
+        "geometry_of_truth": {
+            "num_train": 0,
+            "num_test": main_test_size,
+            "splits": ["test"],
+        },
         "relations": {"num_train": 0, "num_test": main_test_size, "splits": ["test"]},
         "sst2": {"num_train": 0, "num_test": main_test_size, "splits": ["test"]},
         "md_gender": {"num_train": 0, "num_test": main_test_size, "splits": ["test"]},
@@ -287,7 +320,11 @@ if __name__ == "__main__":
             "num_test": main_test_size,
             "splits": ["test"],
         },
-        "singular_plural": {"num_train": 0, "num_test": main_test_size, "splits": ["test"]},
+        "singular_plural": {
+            "num_train": 0,
+            "num_test": main_test_size,
+            "splits": ["test"],
+        },
     }
 
     lora_paths_with_labels = {
@@ -338,7 +375,9 @@ if __name__ == "__main__":
 
     for dataset_loader in classification_dataset_loaders:
         if "test" in dataset_loader.dataset_config.splits:
-            all_eval_data[dataset_loader.dataset_config.dataset_name] = dataset_loader.load_dataset("test")
+            all_eval_data[dataset_loader.dataset_config.dataset_name] = (
+                dataset_loader.load_dataset("test")
+            )
 
     model = load_model(model_name, dtype, load_in_8bit=True)
     submodule = get_hf_submodule(model, hook_layer)

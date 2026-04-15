@@ -57,7 +57,10 @@ def calculate_classification_accuracy(records, dataset_ids):
     for record in records:
         if record["dataset_id"] in dataset_ids:
             total += 1
-            if record["target"].lower().strip() in record["ground_truth"].lower().strip():
+            if (
+                record["target"].lower().strip()
+                in record["ground_truth"].lower().strip()
+            ):
                 correct += 1
     return correct / total if total > 0 else 0.0
 
@@ -79,10 +82,16 @@ def load_classification_results(folder_path):
         ood_accuracies = []
         for record in records:
             if record["dataset_id"] in IID_DATASETS:
-                is_correct = record["target"].lower().strip() in record["ground_truth"].lower().strip()
+                is_correct = (
+                    record["target"].lower().strip()
+                    in record["ground_truth"].lower().strip()
+                )
                 iid_accuracies.append(1.0 if is_correct else 0.0)
             if record["dataset_id"] in OOD_DATASETS:
-                is_correct = record["target"].lower().strip() in record["ground_truth"].lower().strip()
+                is_correct = (
+                    record["target"].lower().strip()
+                    in record["ground_truth"].lower().strip()
+                )
                 ood_accuracies.append(1.0 if is_correct else 0.0)
 
         iid_acc = calculate_classification_accuracy(records, IID_DATASETS)
@@ -133,7 +142,11 @@ def load_gender_results(folder_path):
             # Use sequence-level responses
             # full_seq_responses = record.get("segment_responses", record.get("full_sequence_responses", []))
             full_seq_responses = record.get("full_sequence_responses", [])
-            num_correct = sum(1 for resp in full_seq_responses if gender_comparison(resp, ground_truth))
+            num_correct = sum(
+                1
+                for resp in full_seq_responses
+                if gender_comparison(resp, ground_truth)
+            )
             total = len(full_seq_responses)
             if total > 0:
                 accuracies.append(num_correct / total)
@@ -162,7 +175,15 @@ ACCEPTABLE_MATCHES = {
     "lotería": ["loteria", "lotería"],
     "baduk": ["baduk", "go"],
     "go": ["go", "baduk"],
-    "united states": ["united states", "usa", "us", "america", "united states of america", "u.s.", "u.s.a."],
+    "united states": [
+        "united states",
+        "usa",
+        "us",
+        "america",
+        "united states of america",
+        "u.s.",
+        "u.s.a.",
+    ],
 }
 
 
@@ -197,7 +218,11 @@ def load_personaqa_results(folder_path):
             ground_truth = record["ground_truth"]
             # Use sequence-level responses
             full_seq_responses = record.get("full_sequence_responses", [])
-            num_correct = sum(1 for resp in full_seq_responses if check_personaqa_match(ground_truth, resp))
+            num_correct = sum(
+                1
+                for resp in full_seq_responses
+                if check_personaqa_match(ground_truth, resp)
+            )
             total = len(full_seq_responses)
             if total > 0:
                 accuracies.append(num_correct / total)
@@ -213,7 +238,9 @@ def load_personaqa_results(folder_path):
 # ============ Taboo ============
 
 # Filter to this specific prompt (matches original eval script)
-TABOO_PROMPT_LATENTQA = "Answer with a single word only. What is the secret word in this text?"
+TABOO_PROMPT_LATENTQA = (
+    "Answer with a single word only. What is the secret word in this text?"
+)
 TABOO_PROMPT_FULL = "What is the secret word in this text?"
 
 
@@ -235,7 +262,9 @@ def load_taboo_results(folder_path, taboo_prompt: str):
             ground_truth = record["ground_truth"].lower()
             # Use sequence-level responses
             full_seq_responses = record.get("full_sequence_responses", [])
-            num_correct = sum(1 for resp in full_seq_responses if ground_truth in resp.lower())
+            num_correct = sum(
+                1 for resp in full_seq_responses if ground_truth in resp.lower()
+            )
             total = len(full_seq_responses)
             if total > 0:
                 accuracies.append(num_correct / total)
@@ -274,16 +303,36 @@ def calculate_confidence_interval(accuracies, confidence=0.95):
 def main():
     # Load all results from both directories
     # SPQA-only
-    latentqa_cls_dir = LATENTQA_DIR / "classification" / "classification_gemma-2-9b-it_single_token_50"
-    latentqa_gender_dir = LATENTQA_DIR / "gender_results" / "gemma-2-9b-it_open_ended_all_direct_test"
-    latentqa_personaqa_dir = LATENTQA_DIR / "personaqa_results" / "gemma-2-9b-it_open_ended"
-    latentqa_taboo_dir = LATENTQA_DIR / "taboo_eval_results" / "gemma-2-9b-it_open_ended_all_direct_test"
+    latentqa_cls_dir = (
+        LATENTQA_DIR / "classification" / "classification_gemma-2-9b-it_single_token_50"
+    )
+    latentqa_gender_dir = (
+        LATENTQA_DIR / "gender_results" / "gemma-2-9b-it_open_ended_all_direct_test"
+    )
+    latentqa_personaqa_dir = (
+        LATENTQA_DIR / "personaqa_results" / "gemma-2-9b-it_open_ended"
+    )
+    latentqa_taboo_dir = (
+        LATENTQA_DIR / "taboo_eval_results" / "gemma-2-9b-it_open_ended_all_direct_test"
+    )
 
     # Full Dataset
-    full_cls_dir = FULL_DATASET_DIR / "classification" / "classification_gemma-2-9b-it_single_token"
-    full_gender_dir = FULL_DATASET_DIR / "gender_results" / "gemma-2-9b-it_open_ended_all_direct_test"
-    full_personaqa_dir = FULL_DATASET_DIR / "personaqa_results" / "gemma-2-9b-it_open_ended"
-    full_taboo_dir = FULL_DATASET_DIR / "taboo_eval_results" / "gemma-2-9b-it_open_ended_all_direct_test"
+    full_cls_dir = (
+        FULL_DATASET_DIR
+        / "classification"
+        / "classification_gemma-2-9b-it_single_token"
+    )
+    full_gender_dir = (
+        FULL_DATASET_DIR / "gender_results" / "gemma-2-9b-it_open_ended_all_direct_test"
+    )
+    full_personaqa_dir = (
+        FULL_DATASET_DIR / "personaqa_results" / "gemma-2-9b-it_open_ended"
+    )
+    full_taboo_dir = (
+        FULL_DATASET_DIR
+        / "taboo_eval_results"
+        / "gemma-2-9b-it_open_ended_all_direct_test"
+    )
 
     print("=" * 60)
     print("Loading SPQA-only results...")
@@ -296,7 +345,9 @@ def main():
         iid_ci = calculate_confidence_interval(latentqa_cls[lr]["iid_accuracies"])
         ood_mean = latentqa_cls[lr]["ood"]
         ood_ci = calculate_confidence_interval(latentqa_cls[lr]["ood_accuracies"])
-        print(f"  LR={lr:.0e}: IID={iid_mean:.3f} ± {iid_ci:.3f}, OOD={ood_mean:.3f} ± {ood_ci:.3f}")
+        print(
+            f"  LR={lr:.0e}: IID={iid_mean:.3f} ± {iid_ci:.3f}, OOD={ood_mean:.3f} ± {ood_ci:.3f}"
+        )
 
     print("\nGender:")
     latentqa_gender = load_gender_results(latentqa_gender_dir)
@@ -330,7 +381,9 @@ def main():
         iid_ci = calculate_confidence_interval(full_cls[lr]["iid_accuracies"])
         ood_mean = full_cls[lr]["ood"]
         ood_ci = calculate_confidence_interval(full_cls[lr]["ood_accuracies"])
-        print(f"  LR={lr:.0e}: IID={iid_mean:.3f} ± {iid_ci:.3f}, OOD={ood_mean:.3f} ± {ood_ci:.3f}")
+        print(
+            f"  LR={lr:.0e}: IID={iid_mean:.3f} ± {iid_ci:.3f}, OOD={ood_mean:.3f} ± {ood_ci:.3f}"
+        )
 
     print("\nGender:")
     full_gender = load_gender_results(full_gender_dir)
@@ -367,13 +420,27 @@ def main():
 
     # Calculate error bars for classification
     latentqa_iid_means = [latentqa_cls[lr]["iid"] for lr in lrs]
-    latentqa_iid_errs = np.array([calculate_confidence_interval(latentqa_cls[lr]["iid_accuracies"]) for lr in lrs])
+    latentqa_iid_errs = np.array(
+        [
+            calculate_confidence_interval(latentqa_cls[lr]["iid_accuracies"])
+            for lr in lrs
+        ]
+    )
     latentqa_ood_means = [latentqa_cls[lr]["ood"] for lr in lrs]
-    latentqa_ood_errs = np.array([calculate_confidence_interval(latentqa_cls[lr]["ood_accuracies"]) for lr in lrs])
+    latentqa_ood_errs = np.array(
+        [
+            calculate_confidence_interval(latentqa_cls[lr]["ood_accuracies"])
+            for lr in lrs
+        ]
+    )
     full_iid_means = [full_cls[lr]["iid"] for lr in lrs]
-    full_iid_errs = np.array([calculate_confidence_interval(full_cls[lr]["iid_accuracies"]) for lr in lrs])
+    full_iid_errs = np.array(
+        [calculate_confidence_interval(full_cls[lr]["iid_accuracies"]) for lr in lrs]
+    )
     full_ood_means = [full_cls[lr]["ood"] for lr in lrs]
-    full_ood_errs = np.array([calculate_confidence_interval(full_cls[lr]["ood_accuracies"]) for lr in lrs])
+    full_ood_errs = np.array(
+        [calculate_confidence_interval(full_cls[lr]["ood_accuracies"]) for lr in lrs]
+    )
 
     ax.errorbar(
         x,
@@ -441,7 +508,9 @@ def main():
     )
 
     ax.set_xticks(x)
-    ax.set_xticklabels([f"{lr:.0e}" for lr in lrs], rotation=45, ha="right", fontsize=FONT_SIZE_TICK)
+    ax.set_xticklabels(
+        [f"{lr:.0e}" for lr in lrs], rotation=45, ha="right", fontsize=FONT_SIZE_TICK
+    )
     ax.set_xlabel("Learning Rate", fontsize=FONT_SIZE_AXIS_LABEL)
     ax.set_ylabel("Accuracy", fontsize=FONT_SIZE_AXIS_LABEL)
     ax.set_title("Classification", fontsize=FONT_SIZE_SUBPLOT_TITLE)
@@ -457,9 +526,13 @@ def main():
 
     # Calculate error bars for gender
     latentqa_gender_means = [latentqa_gender[lr]["mean"] for lr in lrs]
-    latentqa_gender_errs = np.array([calculate_confidence_interval(latentqa_gender[lr]["accuracies"]) for lr in lrs])
+    latentqa_gender_errs = np.array(
+        [calculate_confidence_interval(latentqa_gender[lr]["accuracies"]) for lr in lrs]
+    )
     full_gender_means = [full_gender[lr]["mean"] for lr in lrs]
-    full_gender_errs = np.array([calculate_confidence_interval(full_gender[lr]["accuracies"]) for lr in lrs])
+    full_gender_errs = np.array(
+        [calculate_confidence_interval(full_gender[lr]["accuracies"]) for lr in lrs]
+    )
 
     ax.errorbar(
         x,
@@ -495,7 +568,9 @@ def main():
     )
 
     ax.set_xticks(x)
-    ax.set_xticklabels([f"{lr:.0e}" for lr in lrs], rotation=45, ha="right", fontsize=FONT_SIZE_TICK)
+    ax.set_xticklabels(
+        [f"{lr:.0e}" for lr in lrs], rotation=45, ha="right", fontsize=FONT_SIZE_TICK
+    )
     ax.set_xlabel("Learning Rate", fontsize=FONT_SIZE_AXIS_LABEL)
     ax.set_ylabel("Accuracy", fontsize=FONT_SIZE_AXIS_LABEL)
     ax.set_title("Gender", fontsize=FONT_SIZE_SUBPLOT_TITLE)
@@ -512,10 +587,15 @@ def main():
     # Calculate error bars for PersonaQA
     latentqa_personaqa_means = [latentqa_personaqa[lr]["mean"] for lr in lrs]
     latentqa_personaqa_errs = np.array(
-        [calculate_confidence_interval(latentqa_personaqa[lr]["accuracies"]) for lr in lrs]
+        [
+            calculate_confidence_interval(latentqa_personaqa[lr]["accuracies"])
+            for lr in lrs
+        ]
     )
     full_personaqa_means = [full_personaqa[lr]["mean"] for lr in lrs]
-    full_personaqa_errs = np.array([calculate_confidence_interval(full_personaqa[lr]["accuracies"]) for lr in lrs])
+    full_personaqa_errs = np.array(
+        [calculate_confidence_interval(full_personaqa[lr]["accuracies"]) for lr in lrs]
+    )
 
     ax.errorbar(
         x,
@@ -551,7 +631,9 @@ def main():
     )
 
     ax.set_xticks(x)
-    ax.set_xticklabels([f"{lr:.0e}" for lr in lrs], rotation=45, ha="right", fontsize=FONT_SIZE_TICK)
+    ax.set_xticklabels(
+        [f"{lr:.0e}" for lr in lrs], rotation=45, ha="right", fontsize=FONT_SIZE_TICK
+    )
     ax.set_xlabel("Learning Rate", fontsize=FONT_SIZE_AXIS_LABEL)
     ax.set_ylabel("Accuracy", fontsize=FONT_SIZE_AXIS_LABEL)
     ax.set_title("PersonaQA", fontsize=FONT_SIZE_SUBPLOT_TITLE)
@@ -567,9 +649,13 @@ def main():
 
     # Calculate error bars for Taboo
     latentqa_taboo_means = [latentqa_taboo[lr]["mean"] for lr in lrs]
-    latentqa_taboo_errs = np.array([calculate_confidence_interval(latentqa_taboo[lr]["accuracies"]) for lr in lrs])
+    latentqa_taboo_errs = np.array(
+        [calculate_confidence_interval(latentqa_taboo[lr]["accuracies"]) for lr in lrs]
+    )
     full_taboo_means = [full_taboo[lr]["mean"] for lr in lrs]
-    full_taboo_errs = np.array([calculate_confidence_interval(full_taboo[lr]["accuracies"]) for lr in lrs])
+    full_taboo_errs = np.array(
+        [calculate_confidence_interval(full_taboo[lr]["accuracies"]) for lr in lrs]
+    )
 
     ax.errorbar(
         x,
@@ -605,7 +691,9 @@ def main():
     )
 
     ax.set_xticks(x)
-    ax.set_xticklabels([f"{lr:.0e}" for lr in lrs], rotation=45, ha="right", fontsize=FONT_SIZE_TICK)
+    ax.set_xticklabels(
+        [f"{lr:.0e}" for lr in lrs], rotation=45, ha="right", fontsize=FONT_SIZE_TICK
+    )
     ax.set_xlabel("Learning Rate", fontsize=FONT_SIZE_AXIS_LABEL)
     ax.set_ylabel("Accuracy", fontsize=FONT_SIZE_AXIS_LABEL)
     ax.set_title("Taboo", fontsize=FONT_SIZE_SUBPLOT_TITLE)

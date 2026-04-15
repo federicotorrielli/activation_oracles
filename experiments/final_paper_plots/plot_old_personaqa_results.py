@@ -54,7 +54,9 @@ else:
 TITLE = f"PersonAQA{person_type} Results: {task_type} Response with {sequence_str.capitalize()}-Level Inputs for {model_name}"
 
 
-OUTPUT_PATH = f"{CLS_IMAGE_FOLDER}/personaqa_results_{DATA_DIR}_{sequence_str}_{person_str}.pdf"
+OUTPUT_PATH = (
+    f"{CLS_IMAGE_FOLDER}/personaqa_results_{DATA_DIR}_{sequence_str}_{person_str}.pdf"
+)
 
 
 # Filter filenames - skip files containing any of these strings
@@ -81,7 +83,9 @@ def calculate_accuracy(record):
         ground_truth = record["ground_truth"].lower()
         full_seq_responses = record["full_sequence_responses"]
 
-        num_correct = sum(1 for resp in full_seq_responses if ground_truth in resp.lower())
+        num_correct = sum(
+            1 for resp in full_seq_responses if ground_truth in resp.lower()
+        )
         total = len(full_seq_responses)
 
         return num_correct / total if total > 0 else 0
@@ -158,7 +162,12 @@ def calculate_confidence_interval(accuracies, confidence=0.95):
     return margin
 
 
-def plot_results(results_by_lora, highlight_keyword, highlight_color="#FDB813", highlight_hatch="////"):
+def plot_results(
+    results_by_lora,
+    highlight_keyword,
+    highlight_color="#FDB813",
+    highlight_hatch="////",
+):
     """Create a bar chart of average accuracy by investigator LoRA, highlighting exactly one LoRA."""
     if not results_by_lora:
         print("No results to plot!")
@@ -179,7 +188,9 @@ def plot_results(results_by_lora, highlight_keyword, highlight_color="#FDB813", 
         mean_accuracies.append(mean_acc)
         ci_margin = calculate_confidence_interval(accuracies)
         error_bars.append(ci_margin)
-        print(f"{lora_name}: {mean_acc:.3f} ± {ci_margin:.3f} (n={len(accuracies)} records)")
+        print(
+            f"{lora_name}: {mean_acc:.3f} ± {ci_margin:.3f} (n={len(accuracies)} records)"
+        )
 
     # Assert exactly one match and move it to index 0
     matches = [i for i, name in enumerate(lora_names) if highlight_keyword in name]
@@ -211,12 +222,19 @@ def plot_results(results_by_lora, highlight_keyword, highlight_color="#FDB813", 
             legend_labels.append(name)
 
     # Get colors based on labels, with highlight override
-    colors = get_colors_for_labels(legend_labels, highlight_color=highlight_color, highlight_index=0)
+    colors = get_colors_for_labels(
+        legend_labels, highlight_color=highlight_color, highlight_index=0
+    )
 
     # Create bar chart
     fig, ax = plt.subplots(figsize=(12, 6))
     bars = ax.bar(
-        range(len(lora_names)), mean_accuracies, color=colors, yerr=error_bars, capsize=5, error_kw={"linewidth": 2}
+        range(len(lora_names)),
+        mean_accuracies,
+        color=colors,
+        yerr=error_bars,
+        capsize=5,
+        error_kw={"linewidth": 2},
     )
 
     # Distinctive styling for the highlighted bar
@@ -280,13 +298,20 @@ def plot_per_word_accuracy(results_by_lora_word):
         for w, accs in word_accuracies.items():
             mean_acc = sum(accs) / len(accs)
             ci = calculate_confidence_interval(accs)
-            print(f"{lora_name} - Word '{w}': {mean_acc:.3f} ± {ci:.3f} (n={len(accs)})")
+            print(
+                f"{lora_name} - Word '{w}': {mean_acc:.3f} ± {ci:.3f} (n={len(accs)})"
+            )
 
         # Create figure
         fig, ax = plt.subplots(figsize=(14, 6))
         colors = plt.cm.tab20(np.linspace(0, 1, len(words)))
         bars = ax.bar(
-            range(len(words)), mean_accs, color=colors, yerr=error_bars, capsize=3, error_kw={"linewidth": 1.5}
+            range(len(words)),
+            mean_accs,
+            color=colors,
+            yerr=error_bars,
+            capsize=3,
+            error_kw={"linewidth": 1.5},
         )
 
         ax.set_xlabel("Word", fontsize=FONT_SIZE_Y_AXIS_LABEL)
@@ -299,7 +324,13 @@ def plot_per_word_accuracy(results_by_lora_word):
 
         # Add horizontal line for overall mean
         overall_mean = sum(mean_accs) / len(mean_accs)
-        ax.axhline(y=overall_mean, color="red", linestyle="--", label=f"Overall mean: {overall_mean:.3f}", linewidth=2)
+        ax.axhline(
+            y=overall_mean,
+            color="red",
+            linestyle="--",
+            label=f"Overall mean: {overall_mean:.3f}",
+            linewidth=2,
+        )
         ax.legend()
 
         plt.tight_layout()

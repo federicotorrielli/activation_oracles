@@ -64,7 +64,9 @@ if __name__ == "__main__":
             "adamkarvonen/checkpoints_cls_only_addition_Qwen3-8B",
             "adamkarvonen/checkpoints_cls_latentqa_sae_addition_Qwen3-8B",
         ]
-        target_lora_path_template: Optional[str] = "adamkarvonen/Qwen3-8B-taboo-{lora_path}_50_mix"
+        target_lora_path_template: Optional[str] = (
+            "adamkarvonen/Qwen3-8B-taboo-{lora_path}_50_mix"
+        )
         segment_start = -10
     elif model_name == "google/gemma-2-9b-it":
         verbalizer_lora_paths = [
@@ -81,7 +83,9 @@ if __name__ == "__main__":
             # "adamkarvonen/checkpoints_latentqa_only_gemma-2-9b-it_lr_1e-4",
             # "adamkarvonen/checkpoints_latentqa_only_gemma-2-9b-it_lr_3e-4",
         ]
-        target_lora_path_template: Optional[str] = "bcywinski/gemma-2-9b-it-taboo-{lora_path}"
+        target_lora_path_template: Optional[str] = (
+            "bcywinski/gemma-2-9b-it-taboo-{lora_path}"
+        )
         segment_start = -10
     else:
         raise ValueError(f"Unsupported MODEL_NAME: {model_name}")
@@ -113,7 +117,9 @@ if __name__ == "__main__":
     )
 
     experiments_dir: str = "experiments/taboo_eval_results"
-    output_json_dir: str = f"{experiments_dir}/{model_name_str}_open_ended_{PROMPT_TYPE}_{DATASET_TYPE}"
+    output_json_dir: str = (
+        f"{experiments_dir}/{model_name_str}_open_ended_{PROMPT_TYPE}_{DATASET_TYPE}"
+    )
 
     os.makedirs(experiments_dir, exist_ok=True)
     os.makedirs(output_json_dir, exist_ok=True)
@@ -173,18 +179,26 @@ if __name__ == "__main__":
         verbalizer_results = []
         sanitized_verbalizer_name = None
         if verbalizer_lora_path is not None:
-            sanitized_verbalizer_name = base_experiment.load_lora_adapter(model, verbalizer_lora_path)
+            sanitized_verbalizer_name = base_experiment.load_lora_adapter(
+                model, verbalizer_lora_path
+            )
 
         for target_lora_suffix in target_lora_suffixes:
             target_lora_path = None
             if target_lora_suffix is not None:
-                target_lora_path = target_lora_path_template.format(lora_path=target_lora_suffix)
+                target_lora_path = target_lora_path_template.format(
+                    lora_path=target_lora_suffix
+                )
 
             sanitized_target_name = None
             if target_lora_path is not None:
-                sanitized_target_name = base_experiment.load_lora_adapter(model, target_lora_path)
+                sanitized_target_name = base_experiment.load_lora_adapter(
+                    model, target_lora_path
+                )
 
-            print(f"Running verbalizer eval for verbalizer: {verbalizer_lora_path}, target: {target_lora_path}")
+            print(
+                f"Running verbalizer eval for verbalizer: {verbalizer_lora_path}, target: {target_lora_path}"
+            )
 
             # Build context prompts with ground truth
             verbalizer_prompt_infos: list[VerbalizerInputInfo] = []
@@ -203,8 +217,16 @@ if __name__ == "__main__":
             # Show which combo is running alongside inner progress
             combo_pbar.set_postfix(
                 {
-                    "verbalizer": (verbalizer_lora_path.split("/")[-1] if verbalizer_lora_path else "None"),
-                    "target": (target_lora_suffix.split("/")[-1] if target_lora_suffix else "None"),
+                    "verbalizer": (
+                        verbalizer_lora_path.split("/")[-1]
+                        if verbalizer_lora_path
+                        else "None"
+                    ),
+                    "target": (
+                        target_lora_suffix.split("/")[-1]
+                        if target_lora_suffix
+                        else "None"
+                    ),
                 }
             )
 
@@ -219,7 +241,10 @@ if __name__ == "__main__":
             )
             verbalizer_results.extend(results)
 
-            if sanitized_target_name is not None and sanitized_target_name in model.peft_config:
+            if (
+                sanitized_target_name is not None
+                and sanitized_target_name in model.peft_config
+            ):
                 model.delete_adapter(sanitized_target_name)
 
             combo_pbar.update(1)
@@ -236,7 +261,11 @@ if __name__ == "__main__":
             if verbalizer_lora_path is None:
                 lora_name = "base_model"
             else:
-                lora_name = verbalizer_lora_path.split("/")[-1].replace("/", "_").replace(".", "_")
+                lora_name = (
+                    verbalizer_lora_path.split("/")[-1]
+                    .replace("/", "_")
+                    .replace(".", "_")
+                )
                 model.delete_adapter(sanitized_verbalizer_name)
 
             output_json = output_json_template.format(lora=lora_name)

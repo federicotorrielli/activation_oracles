@@ -27,7 +27,11 @@ def fix_json_file(json_path: Path):
     needs_fixing = False
 
     # Check if verbalizer_lora_path needs to be set
-    if "verbalizer_lora_path" not in data and "meta" in data and "investigator_lora_path" in data["meta"]:
+    if (
+        "verbalizer_lora_path" not in data
+        and "meta" in data
+        and "investigator_lora_path" in data["meta"]
+    ):
         data["verbalizer_lora_path"] = data["meta"]["investigator_lora_path"]
         needs_fixing = True
         print(f"  Set verbalizer_lora_path = {data['verbalizer_lora_path']}")
@@ -48,7 +52,9 @@ def fix_json_file(json_path: Path):
 
     if renamed_count > 0:
         needs_fixing = True
-        print(f"  Renamed 'investigator_prompt' to 'verbalizer_prompt' in {renamed_count} records")
+        print(
+            f"  Renamed 'investigator_prompt' to 'verbalizer_prompt' in {renamed_count} records"
+        )
 
     # Save the modified JSON back
     if needs_fixing:

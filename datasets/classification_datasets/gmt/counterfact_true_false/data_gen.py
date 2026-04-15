@@ -3,7 +3,7 @@ import os
 
 import pandas as pd
 
-ROOT = '/home/ubuntu/statement_reps/datasets'
+ROOT = "/home/ubuntu/statement_reps/datasets"
 
 relations = [
     "In {}, they understand",
@@ -158,35 +158,37 @@ relations = [
     "{} worked in",
 ]
 
-with open(os.path.join(ROOT, 'counterfact.json')) as f:
+with open(os.path.join(ROOT, "counterfact.json")) as f:
     data = json.load(f)
 
 df_out = {
-    'statement' : [],
-    'label' : [],
-    'relation' : [],
-    'subject' : [],
-    'target' : [],
-    'true_target' : [],
+    "statement": [],
+    "label": [],
+    "relation": [],
+    "subject": [],
+    "target": [],
+    "true_target": [],
 }
 
 for case in data:
-    relation = case['requested_rewrite']['prompt']
+    relation = case["requested_rewrite"]["prompt"]
     if relation not in relations:
         continue
-    subject = case['requested_rewrite']['subject']
-    target_true = case['requested_rewrite']['target_true']['str']
-    target_false = case['requested_rewrite']['target_new']['str']
-    true_statement = relation.replace('{}', subject) + ' ' + target_true + '.'
-    false_statement = relation.replace('{}', subject) + ' ' + target_false + '.'
+    subject = case["requested_rewrite"]["subject"]
+    target_true = case["requested_rewrite"]["target_true"]["str"]
+    target_false = case["requested_rewrite"]["target_new"]["str"]
+    true_statement = relation.replace("{}", subject) + " " + target_true + "."
+    false_statement = relation.replace("{}", subject) + " " + target_false + "."
 
-    df_out['statement'].append(true_statement), df_out['statement'].append(false_statement)
-    df_out['label'].append(1), df_out['label'].append(0)
-    df_out['relation'].append(relation), df_out['relation'].append(relation)
-    df_out['subject'].append(subject), df_out['subject'].append(subject)
-    df_out['target'].append(target_true), df_out['target'].append(target_false)
-    df_out['true_target'].append(target_true), df_out['true_target'].append(target_true)
+    (
+        df_out["statement"].append(true_statement),
+        df_out["statement"].append(false_statement),
+    )
+    df_out["label"].append(1), df_out["label"].append(0)
+    df_out["relation"].append(relation), df_out["relation"].append(relation)
+    df_out["subject"].append(subject), df_out["subject"].append(subject)
+    df_out["target"].append(target_true), df_out["target"].append(target_false)
+    df_out["true_target"].append(target_true), df_out["true_target"].append(target_true)
 
 df_out = pd.DataFrame(df_out)
-df_out.to_csv(os.path.join(ROOT, 'counterfact_true_false.csv'), index=False)
-
+df_out.to_csv(os.path.join(ROOT, "counterfact_true_false.csv"), index=False)

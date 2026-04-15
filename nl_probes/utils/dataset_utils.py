@@ -5,9 +5,31 @@ from peft import PeftModel
 from pydantic import BaseModel, ConfigDict, model_validator
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
-from nl_probes.utils.activation_utils import collect_activations_multiple_layers, get_hf_submodule
+from nl_probes.utils.activation_utils import (
+    collect_activations_multiple_layers,
+    get_hf_submodule,
+)
 
 SPECIAL_TOKEN = " ?"
+
+
+def _unwrap_token_ids(result) -> list[int]:
+    """Extract a flat list[int] of token IDs from apply_chat_template output.
+
+    Multimodal tokenizers (e.g. Gemma 4) return BatchEncoding where
+    ["input_ids"] may be nested: [[tok1, tok2, ...]].  This helper
+    handles both plain lists and BatchEncoding with optional nesting.
+    """
+    if hasattr(result, "input_ids"):
+        result = result["input_ids"]
+    # Unwrap single-element batch dimension: [[t1, t2, ...]] -> [t1, t2, ...]
+    if isinstance(result, list) and len(result) == 1 and isinstance(result[0], list):
+        result = result[0]
+    if not isinstance(result, list):
+        raise TypeError(
+            f"Expected list of token ids from tokenizer, got {type(result)}"
+        )
+    return result
 
 
 def get_introspection_prefix(sae_layer: int, num_positions: int) -> str:
@@ -58,12 +80,18 @@ class TrainingDataPoint(BaseModel):
         sv = values.steering_vectors
         if sv is not None:
             if len(values.positions) != sv.shape[0]:
-                raise ValueError("positions and steering_vectors must have the same length")
+                raise ValueError(
+                    "positions and steering_vectors must have the same length"
+                )
         else:
             if values.context_positions is None or values.context_input_ids is None:
-                raise ValueError("context_* must be provided when steering_vectors is None")
+                raise ValueError(
+                    "context_* must be provided when steering_vectors is None"
+                )
             if len(values.positions) != len(values.context_positions):
-                raise ValueError("positions and context_positions must have the same length")
+                raise ValueError(
+                    "positions and context_positions must have the same length"
+                )
         return values
 
 
@@ -193,7 +221,9 @@ def materialize_missing_steering_vectors(
     # Build the input batch (left padding to match your construct_batch convention)
     pad_id = tokenizer.pad_token_id
     contexts: list[list[int]] = [list(dp.context_input_ids) for _, dp in to_fill]
-    positions_per_item: list[list[int]] = [list(dp.context_positions) for _, dp in to_fill]
+    positions_per_item: list[list[int]] = [
+        list(dp.context_positions) for _, dp in to_fill
+    ]
     max_len = max(len(c) for c in contexts)
 
     input_ids_tensors: list[torch.Tensor] = []
@@ -204,9 +234,15 @@ def materialize_missing_steering_vectors(
 
     for c in contexts:
         pad_len = max_len - len(c)
-        input_ids_tensors.append(torch.tensor([pad_id] * pad_len + c, dtype=torch.long, device=device))
+        input_ids_tensors.append(
+            torch.tensor([pad_id] * pad_len + c, dtype=torch.long, device=device)
+        )
         # For HF, bool masks are fine; your construct_batch uses bool too
-        attn_masks_tensors.append(torch.tensor([False] * pad_len + [True] * len(c), dtype=torch.bool, device=device))
+        attn_masks_tensors.append(
+            torch.tensor(
+                [False] * pad_len + [True] * len(c), dtype=torch.bool, device=device
+            )
+        )
         left_offsets.append(pad_len)
 
     inputs_BL = {
@@ -216,7 +252,9 @@ def materialize_missing_steering_vectors(
 
     # Prepare hooks for all unique requested layers
     layers_needed = sorted({dp.layer for _, dp in to_fill})
-    submodules = {layer: get_hf_submodule(model, layer, use_lora=True) for layer in layers_needed}
+    submodules = {
+        layer: get_hf_submodule(model, layer, use_lora=True) for layer in layers_needed
+    }
 
     # Run a single pass with dropout off, then restore the previous train/eval mode
     was_training = model.training
@@ -244,11 +282,15 @@ def materialize_missing_steering_vectors(
         # Bounds check for safety
         L = acts_BLD.shape[1]
         if any(i < 0 or i >= L for i in idxs):
-            raise IndexError(f"Activation index out of range for item {b}: {idxs} with L={L}")
+            raise IndexError(
+                f"Activation index out of range for item {b}: {idxs} with L={L}"
+            )
 
         vectors = acts_BLD[b, idxs, :].detach().contiguous()
 
-        assert len(vectors.shape) == 2, f"Expected 2D tensor, got vectors.shape={vectors.shape}"
+        assert len(vectors.shape) == 2, (
+            f"Expected 2D tensor, got vectors.shape={vectors.shape}"
+        )
 
         dp_new = dp.model_copy(deep=True)
         dp_new.steering_vectors = vectors
@@ -259,12 +301,17 @@ def materialize_missing_steering_vectors(
 
 
 def find_pattern_in_tokens(
-    token_ids: list[int], special_token_str: str, num_positions: int, tokenizer: AutoTokenizer
+    token_ids: list[int],
+    special_token_str: str,
+    num_positions: int,
+    tokenizer: AutoTokenizer,
 ) -> list[int]:
     start_idx = 0
     end_idx = len(token_ids)
     special_token_id = tokenizer.encode(special_token_str, add_special_tokens=False)
-    assert len(special_token_id) == 1, f"Expected single token, got {len(special_token_id)}"
+    assert len(special_token_id) == 1, (
+        f"Expected single token, got {len(special_token_id)}"
+    )
     special_token_id = special_token_id[0]
     positions = []
 
@@ -274,8 +321,12 @@ def find_pattern_in_tokens(
         if token_ids[i] == special_token_id:
             positions.append(i)
 
-    assert len(positions) == num_positions, f"Expected {num_positions} positions, got {len(positions)}"
-    assert positions[-1] - positions[0] == num_positions - 1, f"Positions are not consecutive: {positions}"
+    assert len(positions) == num_positions, (
+        f"Expected {num_positions} positions, got {len(positions)}"
+    )
+    assert positions[-1] - positions[0] == num_positions - 1, (
+        f"Positions are not consecutive: {positions}"
+    )
 
     final_pos = positions[-1] + 1
     final_tokens = token_ids[final_pos : final_pos + 2]
@@ -314,8 +365,9 @@ def create_training_datapoint(
         padding=False,
         enable_thinking=False,
     )
-    if not isinstance(input_prompt_ids, list):
-        raise TypeError("Expected list of token ids from tokenizer")
+    # Multimodal tokenizers (e.g. Gemma 4) return BatchEncoding instead of a plain list.
+    # BatchEncoding["input_ids"] may be nested: [[tok1, tok2, ...]] — unwrap batch dim.
+    input_prompt_ids = _unwrap_token_ids(input_prompt_ids)
 
     full_messages = input_messages + [{"role": "assistant", "content": target_response}]
 
@@ -327,16 +379,26 @@ def create_training_datapoint(
         padding=False,
         enable_thinking=False,
     )
-    if not isinstance(full_prompt_ids, list):
-        raise TypeError("Expected list of token ids from tokenizer")
+    full_prompt_ids = _unwrap_token_ids(full_prompt_ids)
 
-    assistant_start_idx = len(input_prompt_ids)
+    # Find where the prompt ends by comparing the two tokenizations.
+    # We can't just use len(input_prompt_ids) because BPE tokenization at
+    # the boundary between the generation prompt and assistant response can
+    # merge tokens (e.g. "\n" + "No" -> "\nNo"), making the full conversation
+    # shorter than the prompt-only version.
+    assistant_start_idx = 0
+    for idx in range(min(len(input_prompt_ids), len(full_prompt_ids))):
+        if input_prompt_ids[idx] != full_prompt_ids[idx]:
+            break
+        assistant_start_idx = idx + 1
 
     labels = full_prompt_ids.copy()
     for i in range(assistant_start_idx):
         labels[i] = -100
 
-    positions = find_pattern_in_tokens(full_prompt_ids, SPECIAL_TOKEN, num_positions, tokenizer)
+    positions = find_pattern_in_tokens(
+        full_prompt_ids, SPECIAL_TOKEN, num_positions, tokenizer
+    )
 
     if acts_BD is None:
         assert context_input_ids is not None and context_positions is not None, (
@@ -345,7 +407,9 @@ def create_training_datapoint(
     else:
         assert len(acts_BD.shape) == 2, f"Expected 2D tensor, got {acts_BD.shape}"
         acts_BD = acts_BD.cpu().clone().detach()
-        assert len(positions) == acts_BD.shape[0], f"Expected {acts_BD.shape[0]} positions, got {len(positions)}"
+        assert len(positions) == acts_BD.shape[0], (
+            f"Expected {acts_BD.shape[0]} positions, got {len(positions)}"
+        )
 
     training_data_point = TrainingDataPoint(
         input_ids=full_prompt_ids,

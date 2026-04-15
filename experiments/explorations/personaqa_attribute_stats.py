@@ -73,7 +73,9 @@ fig.suptitle("Value Frequency (Top 15) per Attribute")
 axes_list = axes.ravel()
 
 for attribute, ax in zip(ATTRIBUTES, axes_list):
-    counts = Counter(record[attribute] for record in records if record.get(attribute) is not None)
+    counts = Counter(
+        record[attribute] for record in records if record.get(attribute) is not None
+    )
     most_common = counts.most_common(15)
     labels = [value for value, _ in most_common]
     values = [count for _, count in most_common]

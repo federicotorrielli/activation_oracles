@@ -179,7 +179,9 @@ def main(
     max_feature_idx = acts_data["max_tokens"].shape[0] - 1
     for feature_idx in target_features:
         if feature_idx > max_feature_idx:
-            raise ValueError(f"Feature {feature_idx} not found. Max feature index: {max_feature_idx}")
+            raise ValueError(
+                f"Feature {feature_idx} not found. Max feature index: {max_feature_idx}"
+            )
 
     # Load model, tokenizer, and SAE
     print("🚀 Loading model and SAE...")
@@ -191,14 +193,23 @@ def main(
     print(f"🔍 Number of features in SAE: {len(sae.W_dec)}")  # type: ignore
 
     # Process each feature index
-    special_tokens = [tokenizer.eos_token_id, tokenizer.bos_token_id, tokenizer.pad_token_id]
-    special_tokens = [tokenizer.decode(token_id, skip_special_tokens=False) for token_id in special_tokens]
+    special_tokens = [
+        tokenizer.eos_token_id,
+        tokenizer.bos_token_id,
+        tokenizer.pad_token_id,
+    ]
+    special_tokens = [
+        tokenizer.decode(token_id, skip_special_tokens=False)
+        for token_id in special_tokens
+    ]
     special_tokens = set(special_tokens)
 
     # open file to append
     with open(output, "a") as f:
         for feature_idx in tqdm(target_features, desc="Processing features"):
-            similar_features = find_most_similar_features(sae, feature_idx, top_k=top_k_similar_features)
+            similar_features = find_most_similar_features(
+                sae, feature_idx, top_k=top_k_similar_features
+            )
 
             pos_tokens_BL = acts_data["max_tokens"][feature_idx, :target_sentences]
 
@@ -208,13 +219,19 @@ def main(
 
             all_similar_tokens_BL = []
 
-            similar_feature_indices = [similar_feature.feature_idx for similar_feature in similar_features]
+            similar_feature_indices = [
+                similar_feature.feature_idx for similar_feature in similar_features
+            ]
 
-            all_similar_tokens_KBL = acts_data["max_tokens"][similar_feature_indices, :negative_sentences]
+            all_similar_tokens_KBL = acts_data["max_tokens"][
+                similar_feature_indices, :negative_sentences
+            ]
 
             K, B, L = all_similar_tokens_KBL.shape
 
-            all_similar_tokens_BL = einops.rearrange(all_similar_tokens_KBL, "K B L -> (K B) L")
+            all_similar_tokens_BL = einops.rearrange(
+                all_similar_tokens_KBL, "K B L -> (K B) L"
+            )
 
             all_similar_acts_BL = compute_sae_activations_for_sentences(
                 model,
@@ -226,10 +243,14 @@ def main(
                 batch_size,
             )
 
-            all_similar_acts_KBL = einops.rearrange(all_similar_acts_BL, "(K B) L -> K B L", K=K, B=B)
+            all_similar_acts_KBL = einops.rearrange(
+                all_similar_acts_BL, "(K B) L -> K B L", K=K, B=B
+            )
 
             max_similar_acts_KB = all_similar_acts_KBL.max(dim=-1).values
-            hard_negatives_mask_KB = max_similar_acts_KB > (hard_negative_threshold * max_target_act)
+            hard_negatives_mask_KB = max_similar_acts_KB > (
+                hard_negative_threshold * max_target_act
+            )
             all_similar_acts_KBL[hard_negatives_mask_KB] = -1
 
             all_similar_acts_KBL = all_similar_acts_KBL.cpu()
@@ -241,7 +262,9 @@ def main(
             if verbose:
                 print(f"\n🎯 Processing feature {feature_idx}...")
                 # Find most similar features
-                print(f"🔍 Finding {top_k_similar_features} most similar features to feature {feature_idx}...")
+                print(
+                    f"🔍 Finding {top_k_similar_features} most similar features to feature {feature_idx}..."
+                )
 
                 # Get sentences for target feature
                 print(f"📝 Getting sentences for target feature {feature_idx}...")
@@ -250,7 +273,9 @@ def main(
                 print("🧮 Computing SAE activations for target feature sentences...")
 
                 # Collect all sentences from similar features first
-                print(f"📝 Collecting sentences from {len(similar_features)} similar features...")
+                print(
+                    f"📝 Collecting sentences from {len(similar_features)} similar features..."
+                )
 
                 # Compute target feature activations on ALL similar feature sentences in batches
                 print(
@@ -262,12 +287,16 @@ def main(
 
             pos_sentence_infos = []
 
-            for i, pos_tokens in zip(range(len(decoded_pos_tokens)), decoded_pos_tokens):
+            for i, pos_tokens in zip(
+                range(len(decoded_pos_tokens)), decoded_pos_tokens
+            ):
                 token_activations = []
                 tokens: list[str] = []
                 max_act = 0
                 acts_L = pos_acts_BL[i, :].tolist()
-                non_special_tokens = [token for token in pos_tokens if token not in special_tokens]
+                non_special_tokens = [
+                    token for token in pos_tokens if token not in special_tokens
+                ]
                 for j, token in enumerate(non_special_tokens):
                     if token in special_tokens:
                         continue
@@ -275,19 +304,27 @@ def main(
                     max_act = max(max_act, act)
                     # only save if act > 0 for space reasons
                     if act > 0.0:
-                        token_activations.append(TokenActivationV2.model_construct(s=token, act=act, pos=j))
+                        token_activations.append(
+                            TokenActivationV2.model_construct(s=token, act=act, pos=j)
+                        )
                     # save all tokens
                     tokens.append(token)
                 pos_sentence_infos.append(
-                    SentenceInfoV2.model_construct(max_act=max_act, tokens=tokens, act_tokens=token_activations)
+                    SentenceInfoV2.model_construct(
+                        max_act=max_act, tokens=tokens, act_tokens=token_activations
+                    )
                 )
 
-            pos_sae_activations = SAEActivationsV2(sae_id=feature_idx, sentences=pos_sentence_infos)
+            pos_sae_activations = SAEActivationsV2(
+                sae_id=feature_idx, sentences=pos_sentence_infos
+            )
 
             hard_negatives = []
 
             for k_idx, similar_feature_idx in enumerate(similar_feature_indices):
-                decoded_hard_negative_tokens = list_decode(all_similar_tokens_KBL[k_idx], tokenizer)
+                decoded_hard_negative_tokens = list_decode(
+                    all_similar_tokens_KBL[k_idx], tokenizer
+                )
                 all_similar_acts_BL = all_similar_acts_KBL[k_idx]
                 hard_negative_sentence_infos = []
 
@@ -299,7 +336,11 @@ def main(
                     tokens: list[str] = []
                     max_act = 0
                     acts_L = all_similar_acts_BL[i, :].tolist()
-                    non_special_tokens = [token for token in hard_negative_tokens if token not in special_tokens]
+                    non_special_tokens = [
+                        token
+                        for token in hard_negative_tokens
+                        if token not in special_tokens
+                    ]
                     for j, token in enumerate(non_special_tokens):
                         if token in special_tokens:
                             continue
@@ -307,7 +348,11 @@ def main(
                         max_act = max(max_act, act)
                         # only save if act > 0 for space reasons
                         if act > 0.0:
-                            token_activations.append(TokenActivationV2.model_construct(s=token, act=act, pos=j))
+                            token_activations.append(
+                                TokenActivationV2.model_construct(
+                                    s=token, act=act, pos=j
+                                )
+                            )
                         tokens.append(token)
                     hard_negative_sentence_infos.append(
                         SentenceInfoV2.model_construct(
@@ -328,7 +373,10 @@ def main(
                 hard_negatives.append(hard_negative_sae_activations)
 
             sae_result = SAEV2(
-                sae_id=feature_idx, sae_info=sae_info, activations=pos_sae_activations, hard_negatives=hard_negatives
+                sae_id=feature_idx,
+                sae_info=sae_info,
+                activations=pos_sae_activations,
+                hard_negatives=hard_negatives,
             )
             f.write(sae_result.model_dump_json(exclude_none=True) + "\n")
 

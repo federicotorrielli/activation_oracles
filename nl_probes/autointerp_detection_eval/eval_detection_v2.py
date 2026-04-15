@@ -53,7 +53,9 @@ class SAEExplained(BaseModel):
     f1: float
 
 
-def read_sae_file(sae_file: str, limit: int | None = None, start_index: int = 0) -> Slist[SAEV2]:
+def read_sae_file(
+    sae_file: str, limit: int | None = None, start_index: int = 0
+) -> Slist[SAEV2]:
     """Read SAEs from a JSONL file with optional start index and limit.
 
     Args:
@@ -84,7 +86,9 @@ def read_sae_file(sae_file: str, limit: int | None = None, start_index: int = 0)
             return output
 
 
-def read_sae_file_to_str(sae_file: str, limit: int | None = None, start_index: int = 0) -> Slist[str]:
+def read_sae_file_to_str(
+    sae_file: str, limit: int | None = None, start_index: int = 0
+) -> Slist[str]:
     start_time = time.time()
     with open(sae_file) as f:
         output = Slist[str]()
@@ -136,9 +140,13 @@ def sentence_to_prompt_with_vector(sentence: SentenceInfoV2) -> str:
     """
     Convert a SentenceInfoV2 object to a prompt.
     """
-    max_activation_token: TokenActivationV2 | None = Slist(sentence.act_tokens).max_by(lambda x: x.act)
+    max_activation_token: TokenActivationV2 | None = Slist(sentence.act_tokens).max_by(
+        lambda x: x.act
+    )
     activation_vector = _activation_vector_str_v2(sentence)
-    max_act_token_str = max_activation_token.s if max_activation_token is not None else "None"
+    max_act_token_str = (
+        max_activation_token.s if max_activation_token is not None else "None"
+    )
     return f"""<full_sentence>
 {_sentence_text_v2(sentence)}
 </full_sentence>
@@ -185,7 +193,9 @@ class SAETrainTest(BaseModel):
         test_hard_negative_sentences: int,
     ) -> "SAETrainTest | None":
         # Split main activations into train/test
-        needed_sentences = target_feature_test_sentences + target_feature_train_sentences
+        needed_sentences = (
+            target_feature_test_sentences + target_feature_train_sentences
+        )
         if len(sae.activations.sentences) < needed_sentences:
             print(
                 f"WARNING: Not enough sentences to split into train and test: {len(sae.activations.sentences)}, needed {needed_sentences}"
@@ -196,15 +206,20 @@ class SAETrainTest(BaseModel):
         # )
         # TODO: Fix upstream code to filtered for non empty sentences.
         shuffled_sentences = (
-            Slist(sae.activations.sentences).shuffle(str(sae.sae_id)).filter(lambda x: _sentence_text_v2(x) != "")
+            Slist(sae.activations.sentences)
+            .shuffle(str(sae.sae_id))
+            .filter(lambda x: _sentence_text_v2(x) != "")
         )
 
         train_sentences = shuffled_sentences[:target_feature_train_sentences]
         test_sentences = shuffled_sentences[
-            target_feature_train_sentences : target_feature_train_sentences + target_feature_test_sentences
+            target_feature_train_sentences : target_feature_train_sentences
+            + target_feature_test_sentences
         ]
 
-        train_activations = SAEActivationsV2(sae_id=sae.sae_id, sentences=train_sentences)
+        train_activations = SAEActivationsV2(
+            sae_id=sae.sae_id, sentences=train_sentences
+        )
         test_activations = SAEActivationsV2(sae_id=sae.sae_id, sentences=test_sentences)
 
         # Split hard negatives into train/test
@@ -213,12 +228,16 @@ class SAETrainTest(BaseModel):
 
         # Filter hard negatives that have enough sentences for training
         valid_train_hard_negatives = [
-            hard_neg for hard_neg in sae.hard_negatives if len(hard_neg.sentences) >= train_hard_negative_sentences
+            hard_neg
+            for hard_neg in sae.hard_negatives
+            if len(hard_neg.sentences) >= train_hard_negative_sentences
         ]
 
         # Filter hard negatives that have enough sentences for testing
         valid_test_hard_negatives = [
-            hard_neg for hard_neg in sae.hard_negatives if len(hard_neg.sentences) >= test_hard_negative_sentences
+            hard_neg
+            for hard_neg in sae.hard_negatives
+            if len(hard_neg.sentences) >= test_hard_negative_sentences
         ]
 
         if len(valid_train_hard_negatives) < train_hard_negative_saes:
@@ -239,16 +258,23 @@ class SAETrainTest(BaseModel):
         )
 
         for hard_negative_sae in selected_train_hard_negatives:
-            shuffled_hard_neg_sentences = Slist(hard_negative_sae.sentences).shuffle(str(hard_negative_sae.sae_id))
-            # For some reason, the hard negative sentences are sometimes empty.
-            filtered_hard_neg_sentences: Slist[SentenceInfoV2] = shuffled_hard_neg_sentences.filter(
-                lambda x: _sentence_text_v2(x) != ""
+            shuffled_hard_neg_sentences = Slist(hard_negative_sae.sentences).shuffle(
+                str(hard_negative_sae.sae_id)
             )
-            train_hard_neg_sentences = filtered_hard_neg_sentences[:train_hard_negative_sentences]
+            # For some reason, the hard negative sentences are sometimes empty.
+            filtered_hard_neg_sentences: Slist[SentenceInfoV2] = (
+                shuffled_hard_neg_sentences.filter(lambda x: _sentence_text_v2(x) != "")
+            )
+            train_hard_neg_sentences = filtered_hard_neg_sentences[
+                :train_hard_negative_sentences
+            ]
 
             if train_hard_neg_sentences:
                 train_hard_negatives.append(
-                    SAEActivationsV2(sae_id=hard_negative_sae.sae_id, sentences=train_hard_neg_sentences)
+                    SAEActivationsV2(
+                        sae_id=hard_negative_sae.sae_id,
+                        sentences=train_hard_neg_sentences,
+                    )
                 )
 
         # Sample test hard negatives (can be different from training ones)
@@ -257,12 +283,19 @@ class SAETrainTest(BaseModel):
         )
 
         for hard_negative_sae in selected_test_hard_negatives:
-            shuffled_hard_neg_sentences = Slist(hard_negative_sae.sentences).shuffle(str(hard_negative_sae.sae_id))
-            test_hard_neg_sentences = shuffled_hard_neg_sentences[:test_hard_negative_sentences]
+            shuffled_hard_neg_sentences = Slist(hard_negative_sae.sentences).shuffle(
+                str(hard_negative_sae.sae_id)
+            )
+            test_hard_neg_sentences = shuffled_hard_neg_sentences[
+                :test_hard_negative_sentences
+            ]
 
             if test_hard_neg_sentences:
                 test_hard_negatives.append(
-                    SAEActivationsV2(sae_id=hard_negative_sae.sae_id, sentences=test_hard_neg_sentences)
+                    SAEActivationsV2(
+                        sae_id=hard_negative_sae.sae_id,
+                        sentences=test_hard_neg_sentences,
+                    )
                 )
 
         return SAETrainTest(
@@ -328,7 +361,9 @@ class SAETrainTestWithExplanation(BaseModel):
     def explanation_text(self) -> str:
         return extract_explanation_text(self.explanation.messages[-1].content)
 
-    def replace_explanation(self, explanation: ChatHistory, explainer_model: str) -> "SAETrainTestWithExplanation":
+    def replace_explanation(
+        self, explanation: ChatHistory, explainer_model: str
+    ) -> "SAETrainTestWithExplanation":
         new = self.model_copy()
         new.explanation = explanation
         new.explainer_model = explainer_model
@@ -341,9 +376,15 @@ class MixedSentencesBatch(BaseModel):
     target_sae_id: int
     explanation_history: ChatHistory
     explanation: str
-    positive_examples: list[SentenceInfoV2]  # Sentences that should activate the feature
-    negative_examples: list[SentenceInfoV2]  # Sentences that should NOT activate the feature
-    target_indices: set[int]  # Indices in shuffled_sentences that correspond to positive examples
+    positive_examples: list[
+        SentenceInfoV2
+    ]  # Sentences that should activate the feature
+    negative_examples: list[
+        SentenceInfoV2
+    ]  # Sentences that should NOT activate the feature
+    target_indices: set[
+        int
+    ]  # Indices in shuffled_sentences that correspond to positive examples
     shuffled_sentences: list[SentenceInfoV2]  # All sentences shuffled for evaluation
 
 
@@ -377,7 +418,10 @@ class DetectionResult(BaseModel):
 
 
 async def call_model_for_sae_explanation(
-    activation: SAETrainTest, caller: Caller, model_info: ModelInfo, best_of_n: int | None
+    activation: SAETrainTest,
+    caller: Caller,
+    model_info: ModelInfo,
+    best_of_n: int | None,
 ) -> Slist[SAETrainTestWithExplanation]:  # Best of n
     """
     Call the specified model to get an explanation for the SAE feature.
@@ -412,7 +456,9 @@ async def call_model_for_sae_explanation(
                     test_activations=activation.test_activations,
                     train_hard_negatives=activation.train_hard_negatives,
                     test_hard_negatives=activation.test_hard_negatives,
-                    explanation=chat_history.add_assistant(content=response.first_response.strip()),
+                    explanation=chat_history.add_assistant(
+                        content=response.first_response.strip()
+                    ),
                     explainer_model=model_info.model,
                 )
             ]
@@ -474,17 +520,23 @@ def create_detection_batch(
 
     # Create deterministic shuffle based on target SAE ID
     deterministic_seed = f"{target_sae.sae_id}"
-    shuffled_indices = Slist(list(range(len(all_sentences)))).shuffle(deterministic_seed)
+    shuffled_indices = Slist(list(range(len(all_sentences)))).shuffle(
+        deterministic_seed
+    )
     shuffled_sentences = [all_sentences[i] for i in shuffled_indices]
 
     # Find where positive examples ended up after shuffling
     target_indices = set()
     for i, original_idx in enumerate(shuffled_indices):
-        if original_idx < num_positive:  # Original positive example indices were 0 to num_positive-1
+        if (
+            original_idx < num_positive
+        ):  # Original positive example indices were 0 to num_positive-1
             target_indices.add(i)
 
     # Extract explanation text
-    explanation_text = extract_explanation_text(target_sae.explanation.messages[-1].content)
+    explanation_text = extract_explanation_text(
+        target_sae.explanation.messages[-1].content
+    )
 
     return MixedSentencesBatch(
         target_sae_id=target_sae.sae_id,
@@ -550,7 +602,9 @@ async def evaluate_sentence_matching(
     # Keep evaluation model constant as requested (GPT-5-mini)
     config = detection_config
     try:
-        response = await caller.call_with_schema(chat_history, config=config, schema=AnswerSchema)
+        response = await caller.call_with_schema(
+            chat_history, config=config, schema=AnswerSchema
+        )
     except ContentPolicyError as e:
         print(f"Content policy error: {e}")
         return None
@@ -561,9 +615,19 @@ async def evaluate_sentence_matching(
     # Calculate metrics
     true_positive = len(predicted_indices & batch.target_indices)
 
-    precision = true_positive / len(predicted_indices) if len(predicted_indices) > 0 else 0.0
-    recall = true_positive / len(batch.target_indices) if len(batch.target_indices) > 0 else 0.0
-    f1_score = 2 * precision * recall / (precision + recall) if (precision + recall) > 0 else 0.0
+    precision = (
+        true_positive / len(predicted_indices) if len(predicted_indices) > 0 else 0.0
+    )
+    recall = (
+        true_positive / len(batch.target_indices)
+        if len(batch.target_indices) > 0
+        else 0.0
+    )
+    f1_score = (
+        2 * precision * recall / (precision + recall)
+        if (precision + recall) > 0
+        else 0.0
+    )
 
     eval_log = chat_history.add_assistant(content=str(answer))
 
@@ -572,9 +636,17 @@ async def evaluate_sentence_matching(
 
     retrieved_sentences_with_emojis = []
     for i, sentence_idx in enumerate(answer):
-        sentence = batch.shuffled_sentences[sentence_idx] if sentence_idx < len(batch.shuffled_sentences) else None
+        sentence = (
+            batch.shuffled_sentences[sentence_idx]
+            if sentence_idx < len(batch.shuffled_sentences)
+            else None
+        )
         emoji = "✅" if sentence_idx in batch.target_indices else "❌"
-        sentence_text = sentence_to_prompt_text_only(sentence) if sentence is not None else "Wrong index"
+        sentence_text = (
+            sentence_to_prompt_text_only(sentence)
+            if sentence is not None
+            else "Wrong index"
+        )
         retrieved_sentences_with_emojis.append(f"{emoji} {sentence_text}")
 
     retrieved_sentences_str = "\n".join(retrieved_sentences_with_emojis)
@@ -594,10 +666,14 @@ async def evaluate_sentence_matching(
 
     # Use the stored positive and negative examples from the batch
     positive_examples_text = (
-        Slist(batch.positive_examples).map(lambda x: _sentence_text_v2(x)).shuffle(f"{batch.target_sae_id}")
+        Slist(batch.positive_examples)
+        .map(lambda x: _sentence_text_v2(x))
+        .shuffle(f"{batch.target_sae_id}")
     )
     negative_examples_text = (
-        Slist(batch.negative_examples).map(lambda x: _sentence_text_v2(x)).shuffle(f"{batch.target_sae_id}")
+        Slist(batch.negative_examples)
+        .map(lambda x: _sentence_text_v2(x))
+        .shuffle(f"{batch.target_sae_id}")
     )
 
     return DetectionResult(
@@ -627,8 +703,12 @@ async def generate_explanations_for_model(
     """Generate explanations for all SAE activations using a specific model."""
     print(f"Generating explanations using {model_info.display_name}...")
 
-    explanations: Slist[Slist[SAETrainTestWithExplanation]] = await split_sae_activations.par_map_async(
-        lambda activation: call_model_for_sae_explanation(activation, caller, model_info, best_of_n),
+    explanations: Slist[
+        Slist[SAETrainTestWithExplanation]
+    ] = await split_sae_activations.par_map_async(
+        lambda activation: call_model_for_sae_explanation(
+            activation, caller, model_info, best_of_n
+        ),
         max_par=max_par,
         tqdm=True,
     )
@@ -644,7 +724,9 @@ async def run_evaluation_for_explanations(
 ) -> Slist[DetectionResult]:
     """Run precision/recall evaluation for a set of explanations using their hard negatives."""
     # Filter out explanations that don't have any test hard negatives
-    explanations_with_hard_negatives = explanations.filter(lambda x: len(x.test_hard_negatives) > 0)
+    explanations_with_hard_negatives = explanations.filter(
+        lambda x: len(x.test_hard_negatives) > 0
+    )
 
     if len(explanations_with_hard_negatives) == 0:
         print("Warning: No explanations have hard negatives for evaluation")
@@ -663,7 +745,9 @@ async def run_evaluation_for_explanations(
     print(f"Created {len(detection_batches)} evaluation batches")
 
     # Run evaluations
-    _evaluation_results: Slist[DetectionResult | None] = await Slist(detection_batches).par_map_async(
+    _evaluation_results: Slist[DetectionResult | None] = await Slist(
+        detection_batches
+    ).par_map_async(
         lambda batch_and_model: evaluate_sentence_matching(
             batch_and_model[0], caller, batch_and_model[1], detection_config
         ),
@@ -693,14 +777,16 @@ async def run_best_of_n_evaluation_for_explanations(
         List of evaluation results with the best F1 score per SAE ID
     """
     # First, run evaluations for all explanations
-    all_evaluation_results = await run_evaluation_for_explanations(explanations, caller, max_par, detection_config)
+    all_evaluation_results = await run_evaluation_for_explanations(
+        explanations, caller, max_par, detection_config
+    )
 
     if len(all_evaluation_results) == 0:
         return Slist([])
 
     # Group evaluation results by SAE ID
-    grouped_by_sae_id: Slist[Group[int, Slist[DetectionResult]]] = all_evaluation_results.group_by(
-        lambda x: x.target_sae_id
+    grouped_by_sae_id: Slist[Group[int, Slist[DetectionResult]]] = (
+        all_evaluation_results.group_by(lambda x: x.target_sae_id)
     )
 
     # For each SAE ID, pick the result with the highest F1 score
@@ -708,13 +794,16 @@ async def run_best_of_n_evaluation_for_explanations(
         lambda group: group[1].max_by(lambda result: result.f1_score)
     ).flatten_option()
 
-    print(f"Best-of-n selection: Reduced {len(all_evaluation_results)} results to {len(best_results)} (best per SAE)")
+    print(
+        f"Best-of-n selection: Reduced {len(all_evaluation_results)} results to {len(best_results)} (best per SAE)"
+    )
 
     return best_results
 
 
 def plot_f1_scores_by_model(
-    groupby_by_model: Slist[Group[str, Slist[DetectionResult]]], rename_map: dict[str, str] = {}
+    groupby_by_model: Slist[Group[str, Slist[DetectionResult]]],
+    rename_map: dict[str, str] = {},
 ) -> None:
     """Plot F1 scores by model using plotly."""
     # Extract model names and average F1 scores
@@ -725,7 +814,9 @@ def plot_f1_scores_by_model(
         if len(evaluation_results) == 0:
             continue  # Skip models with no results
 
-        avg_f1 = evaluation_results.map(lambda x: x.f1_score).sum() / len(evaluation_results)
+        avg_f1 = evaluation_results.map(lambda x: x.f1_score).sum() / len(
+            evaluation_results
+        )
         model_names.append(rename_map.get(model_name, model_name))
         avg_f1_scores.append(avg_f1 * 100)  # Convert to percentage
 
@@ -762,7 +853,8 @@ def plot_f1_scores_by_model(
 
 
 def plot_precision_vs_recall_by_model(
-    groupby_by_model: Slist[Group[str, Slist[DetectionResult]]], rename_map: dict[str, str] = {}
+    groupby_by_model: Slist[Group[str, Slist[DetectionResult]]],
+    rename_map: dict[str, str] = {},
 ) -> None:
     """Plot precision vs recall with models as dots using plotly."""
     # Extract model names and average precision/recall scores
@@ -774,8 +866,12 @@ def plot_precision_vs_recall_by_model(
         if len(evaluation_results) == 0:
             continue  # Skip models with no results
 
-        avg_precision = evaluation_results.map(lambda x: x.precision).sum() / len(evaluation_results)
-        avg_recall = evaluation_results.map(lambda x: x.recall).sum() / len(evaluation_results)
+        avg_precision = evaluation_results.map(lambda x: x.precision).sum() / len(
+            evaluation_results
+        )
+        avg_recall = evaluation_results.map(lambda x: x.recall).sum() / len(
+            evaluation_results
+        )
 
         try_retrieve_name = rename_map.get(model_name, model_name)
         if try_retrieve_name is None:
@@ -877,7 +973,9 @@ async def run_gemma_steering(
     """
     Run gemma steering for a single SAE.
     """
-    history = ChatHistory.from_user(get_introspection_prompt(sae_layer=sae.sae_info.sae_layer))
+    history = ChatHistory.from_user(
+        get_introspection_prompt(sae_layer=sae.sae_info.sae_layer)
+    )
     response = await gemma_caller.call(
         messages=history,
         config=InferenceConfig(
@@ -917,14 +1015,20 @@ async def run_gemma_steering_best_of_n(
     Run gemma steering for a single SAE with best-of-n.
     """
     # Run gemma steering for each try number
-    _explanations: Slist[SAETrainTestWithExplanation] = await Slist(range(best_of_n)).par_map_async(
-        lambda try_number: run_gemma_steering(sae, gemma_caller, model_info, try_number),
+    _explanations: Slist[SAETrainTestWithExplanation] = await Slist(
+        range(best_of_n)
+    ).par_map_async(
+        lambda try_number: run_gemma_steering(
+            sae, gemma_caller, model_info, try_number
+        ),
         max_par=best_of_n,  # already max_par in outer loop
     )
     return _explanations
 
 
-def make_random_explanation(items: Slist[SAETrainTestWithExplanation], name: str) -> Slist[SAETrainTestWithExplanation]:
+def make_random_explanation(
+    items: Slist[SAETrainTestWithExplanation], name: str
+) -> Slist[SAETrainTestWithExplanation]:
     # sort by for determinism
     uniques = (
         items.sort_by(lambda x: (x.sae_id, x.explainer_model, x.explanation_text))
@@ -969,7 +1073,9 @@ async def main(
     test_hard_negative_saes = config.test_hard_negative_saes
     test_hard_negative_sentences = config.test_hard_negative_sentences
 
-    saes = read_sae_file(sae_file, limit=target_saes_to_test, start_index=config.sae_start_index)
+    saes = read_sae_file(
+        sae_file, limit=target_saes_to_test, start_index=config.sae_start_index
+    )
     print(f"Loaded {len(saes)} SAE entries starting at index {config.sae_start_index}")
 
     SAE_INFO = saes[0].sae_info
@@ -979,7 +1085,9 @@ async def main(
 
     def create_sae_train_test(sae: SAEV2) -> SAETrainTest | None:
         # Sample deterministically from test_target_activating_sentences using SAE ID as seed
-        sampled_test_sentences = target_feature_test_sentences.sample(n=1, seed=str(sae.sae_id))[0]
+        sampled_test_sentences = target_feature_test_sentences.sample(
+            n=1, seed=str(sae.sae_id)
+        )[0]
         return SAETrainTest.from_sae(
             sae,
             target_feature_test_sentences=sampled_test_sentences,
@@ -1012,13 +1120,19 @@ async def main(
     if config.best_of_n is not None:
         total_tokens *= config.best_of_n
 
-    print(f"Total explanation input tokens: {total_tokens:,} ({total_tokens / 1_000_000:.2f}M)")
-    print(f"Average explanation input tokens: {total_tokens / len(split_sae_activations):,.0f}")
+    print(
+        f"Total explanation input tokens: {total_tokens:,} ({total_tokens / 1_000_000:.2f}M)"
+    )
+    print(
+        f"Average explanation input tokens: {total_tokens / len(split_sae_activations):,.0f}"
+    )
 
     # Generate explanations for each model
     async with caller:
         non_steering_models = explainer_models.filter(lambda x: not x.use_steering)
-        _explanations: Slist[Slist[SAETrainTestWithExplanation]] = await non_steering_models.par_map_async(
+        _explanations: Slist[
+            Slist[SAETrainTestWithExplanation]
+        ] = await non_steering_models.par_map_async(
             lambda model_info: generate_explanations_for_model(
                 split_sae_activations, model_info, caller, max_par, config.best_of_n
             ),
@@ -1038,12 +1152,16 @@ async def main(
         # RUN_POD_URL = "http://0.0.0.0:8000/v1"
         gemma_client = AsyncOpenAI(api_key="dummy api key", base_url=RUN_POD_URL)
         width = 131  # not cached by api call yet, so manually add to cache path
-        gemma_caller = OpenAICaller(openai_client=gemma_client, cache_path=f"cache/steering_cache_{width}")
+        gemma_caller = OpenAICaller(
+            openai_client=gemma_client, cache_path=f"cache/steering_cache_{width}"
+        )
         best_of_n = config.best_of_n
 
         best_of_n_int = best_of_n or 1
         max_par_bon = max_par // best_of_n_int
-        best_of_n_gemma_explanations = await split_sae_activations.product(steering_models).par_map_async(
+        best_of_n_gemma_explanations = await split_sae_activations.product(
+            steering_models
+        ).par_map_async(
             lambda sae_model: run_gemma_steering_best_of_n(
                 sae_model[0],
                 gemma_caller,
@@ -1058,7 +1176,9 @@ async def main(
 
     if add_random_explanations:
         name = "Random<br>explanation"
-        all_explanations = all_explanations + make_random_explanation(non_gemma_explanations, name)
+        all_explanations = all_explanations + make_random_explanation(
+            non_gemma_explanations, name
+        )
         explainer_models = explainer_models + [ModelInfo(model=name, display_name=name)]
 
     # Run evaluations for each model's explanations
@@ -1092,8 +1212,12 @@ async def main(
     if config.best_of_n is not None:
         total_tokens *= config.best_of_n
 
-    print(f"Total evaluation input tokens: {total_tokens:,} ({total_tokens / 1_000_000:.2f}M)")
-    print(f"Average evaluation input tokens: {total_tokens / len(split_sae_activations):,.0f}")
+    print(
+        f"Total evaluation input tokens: {total_tokens:,} ({total_tokens / 1_000_000:.2f}M)"
+    )
+    print(
+        f"Average evaluation input tokens: {total_tokens / len(split_sae_activations):,.0f}"
+    )
 
     async with caller_for_eval:
         # sort for deterministic results
@@ -1106,9 +1230,13 @@ async def main(
             else run_evaluation_for_explanations
         )
 
-        detection_results_per_model: Slist[Slist[DetectionResult]] = await explainer_models.par_map_async(
+        detection_results_per_model: Slist[
+            Slist[DetectionResult]
+        ] = await explainer_models.par_map_async(
             lambda model_info: detection_func(
-                all_explanations_sorted.filter(lambda x: x.explainer_model == model_info.model),
+                all_explanations_sorted.filter(
+                    lambda x: x.explainer_model == model_info.model
+                ),
                 caller_for_eval,
                 max_par,
                 detection_config,
@@ -1122,8 +1250,8 @@ async def main(
     print("EVALUATION RESULTS BY MODEL")
     print("=" * 50)
 
-    groupby_by_model: Slist[Group[str, Slist[DetectionResult]]] = all_detection_results.group_by(
-        lambda x: x.explainer_model
+    groupby_by_model: Slist[Group[str, Slist[DetectionResult]]] = (
+        all_detection_results.group_by(lambda x: x.explainer_model)
     )
 
     for model_name, evaluation_results in groupby_by_model:
@@ -1131,9 +1259,15 @@ async def main(
             print(f"\n{model_name}: No evaluation results (insufficient data)")
             continue
 
-        avg_precision = evaluation_results.map(lambda x: x.precision).sum() / len(evaluation_results)
-        avg_recall = evaluation_results.map(lambda x: x.recall).sum() / len(evaluation_results)
-        avg_f1 = evaluation_results.map(lambda x: x.f1_score).sum() / len(evaluation_results)
+        avg_precision = evaluation_results.map(lambda x: x.precision).sum() / len(
+            evaluation_results
+        )
+        avg_recall = evaluation_results.map(lambda x: x.recall).sum() / len(
+            evaluation_results
+        )
+        avg_f1 = evaluation_results.map(lambda x: x.f1_score).sum() / len(
+            evaluation_results
+        )
 
         print(f"\n{model_name}:")
         print(f"  Evaluated {len(evaluation_results)} SAEs")
@@ -1146,7 +1280,9 @@ async def main(
 
         # Save the generated explanations
         # explanation_output_file = f"sae_explanations_{safe_model_name}.jsonl"
-        explanation_output_file = sae_file.replace(".jsonl", f"_sae_explanations_{safe_model_name}.jsonl")
+        explanation_output_file = sae_file.replace(
+            ".jsonl", f"_sae_explanations_{safe_model_name}.jsonl"
+        )
         write_jsonl_file_from_basemodel(
             path=explanation_output_file,
             basemodels=evaluation_results.map(lambda x: x.explanation_history),
@@ -1158,18 +1294,26 @@ async def main(
         # print(f"  Detailed results saved to {eval_output_file}")
 
         # history_output_file = f"sae_evaluation_history_{safe_model_name}.jsonl"
-        history_output_file = sae_file.replace(".jsonl", f"_sae_evaluation_history_{safe_model_name}.jsonl")
+        history_output_file = sae_file.replace(
+            ".jsonl", f"_sae_evaluation_history_{safe_model_name}.jsonl"
+        )
         write_jsonl_file_from_basemodel(
             path=history_output_file,
             basemodels=evaluation_results.map(lambda x: x.evaluation_history),
         )
         print(f"  History saved to {history_output_file}")
 
-        sft_data = evaluation_results.map(lambda x: x.to_sae_explained(SAE_INFO)).filter(lambda x: x.f1 > 0.8)
+        sft_data = evaluation_results.map(
+            lambda x: x.to_sae_explained(SAE_INFO)
+        ).filter(lambda x: x.f1 > 0.8)
         # Save the SAE explanations
         # sae_explanations_output_file = f"10k_qwen_28aug_sae_sfted_{safe_model_name}.jsonl"
-        sae_explanations_output_file = sae_file.replace(".jsonl", f"_sft_data_{safe_model_name}.jsonl")
-        write_jsonl_file_from_basemodel(path=sae_explanations_output_file, basemodels=sft_data)
+        sae_explanations_output_file = sae_file.replace(
+            ".jsonl", f"_sft_data_{safe_model_name}.jsonl"
+        )
+        write_jsonl_file_from_basemodel(
+            path=sae_explanations_output_file, basemodels=sft_data
+        )
         print(f"  SAE explanations saved to {sae_explanations_output_file}")
 
         # num_perfect_f1 = 0
@@ -1249,7 +1393,9 @@ if __name__ == "__main__":
     sae_layer_percents = [25, 50, 75]
 
     for sae_layer_percent in sae_layer_percents:
-        sae_files.append(f"sae_data/qwen_hard_negatives_0_20000_layer_percent_{sae_layer_percent}.jsonl")
+        sae_files.append(
+            f"sae_data/qwen_hard_negatives_0_20000_layer_percent_{sae_layer_percent}.jsonl"
+        )
     # sae_files.append(f"sae_data/qwen_hard_negatives_50000_50600_layer_percent_25.jsonl")
 
     for sae_file in sae_files:
@@ -1275,10 +1421,18 @@ if __name__ == "__main__":
             sae_start_index=sae_start_index,
         )
 
-        no_train_hard_negatives_config = hard_negatives_config.replace(train_hard_negative_saes=0)
-        eight_positive_examples_config = hard_negatives_config.replace(train_activating_sentences=8)
-        four_positive_examples_config = hard_negatives_config.replace(train_activating_sentences=4)
-        two_positive_examples = hard_negatives_config.replace(train_activating_sentences=2)
+        no_train_hard_negatives_config = hard_negatives_config.replace(
+            train_hard_negative_saes=0
+        )
+        eight_positive_examples_config = hard_negatives_config.replace(
+            train_activating_sentences=8
+        )
+        four_positive_examples_config = hard_negatives_config.replace(
+            train_activating_sentences=4
+        )
+        two_positive_examples = hard_negatives_config.replace(
+            train_activating_sentences=2
+        )
         best_of_2_config = hard_negatives_config.replace(best_of_n=2)
         best_of_8_config = hard_negatives_config.replace(best_of_n=8)
         best_of_16_config = hard_negatives_config.replace(best_of_n=16)

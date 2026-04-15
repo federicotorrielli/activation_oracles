@@ -30,20 +30,44 @@ engels_train_size = 1000
 BATCH_SIZE = 256
 
 classification_datasets = {
-    "geometry_of_truth": {"num_train": main_train_size, "num_test": main_test_size, "splits": ["train", "test"]},
+    "geometry_of_truth": {
+        "num_train": main_train_size,
+        "num_test": main_test_size,
+        "splits": ["train", "test"],
+    },
     # "relations": {"num_train": main_train_size, "num_test": main_test_size, "splits": ["train", "test"]},
-    "sst2": {"num_train": main_train_size, "num_test": main_test_size, "splits": ["train", "test"]},
-    "md_gender": {"num_train": main_train_size, "num_test": main_test_size, "splits": ["train", "test"]},
+    "sst2": {
+        "num_train": main_train_size,
+        "num_test": main_test_size,
+        "splits": ["train", "test"],
+    },
+    "md_gender": {
+        "num_train": main_train_size,
+        "num_test": main_test_size,
+        "splits": ["train", "test"],
+    },
     # "snli": {"num_train": main_train_size, "num_test": main_test_size, "splits": ["train", "test"]},
-    "ag_news": {"num_train": main_train_size, "num_test": main_test_size, "splits": ["train", "test"]},
+    "ag_news": {
+        "num_train": main_train_size,
+        "num_test": main_test_size,
+        "splits": ["train", "test"],
+    },
     # "ner": {"num_train": main_train_size, "num_test": main_test_size, "splits": ["train", "test"]},
-    "tense": {"num_train": main_train_size, "num_test": main_test_size, "splits": ["train", "test"]},
+    "tense": {
+        "num_train": main_train_size,
+        "num_test": main_test_size,
+        "splits": ["train", "test"],
+    },
     "language_identification": {
         "num_train": main_train_size,
         "num_test": main_test_size,
         "splits": ["train", "test"],
     },
-    "singular_plural": {"num_train": 100, "num_test": main_test_size, "splits": ["train", "test"]},
+    "singular_plural": {
+        "num_train": 100,
+        "num_test": main_test_size,
+        "splits": ["train", "test"],
+    },
     "engels_headline_istrump": {
         "num_train": engels_train_size,
         "num_test": main_test_size,
@@ -59,7 +83,11 @@ classification_datasets = {
         "num_test": main_test_size,
         "splits": ["train", "test"],
     },
-    "engels_hist_fig_ismale": {"num_train": engels_train_size, "num_test": main_test_size, "splits": ["train", "test"]},
+    "engels_hist_fig_ismale": {
+        "num_train": engels_train_size,
+        "num_test": main_test_size,
+        "splits": ["train", "test"],
+    },
     "engels_news_class_politics": {
         "num_train": engels_train_size,
         "num_test": main_test_size,
@@ -118,12 +146,16 @@ for dataset_name in classification_datasets:
         batch_size=batch_size,
     )
 
-    classification_dataset_loaders.append(ClassificationDatasetLoader(dataset_config=dataset_config))
+    classification_dataset_loaders.append(
+        ClassificationDatasetLoader(dataset_config=dataset_config)
+    )
 
 
 # %% [helpers]
 @torch.no_grad()
-def stack_dataset(items: list, label_to_idx: dict | None = None) -> tuple[torch.Tensor, torch.Tensor, dict]:
+def stack_dataset(
+    items: list, label_to_idx: dict | None = None
+) -> tuple[torch.Tensor, torch.Tensor, dict]:
     """
     items[i].steering_vectors: torch.Tensor [1, d] (bf16)
     items[i].ds_label: int or str
@@ -153,7 +185,9 @@ def stack_dataset(items: list, label_to_idx: dict | None = None) -> tuple[torch.
 
 
 @torch.no_grad()
-def standardize_train_test(X_tr: torch.Tensor, X_te: torch.Tensor) -> tuple[torch.Tensor, torch.Tensor]:
+def standardize_train_test(
+    X_tr: torch.Tensor, X_te: torch.Tensor
+) -> tuple[torch.Tensor, torch.Tensor]:
     mu = X_tr.mean(dim=0, keepdim=True)
     std = X_tr.std(dim=0, keepdim=True).clamp_min(1e-6)
     return (X_tr - mu) / std, (X_te - mu) / std
@@ -199,7 +233,9 @@ def train_probe(
     tr_labels = set(y_tr.unique().tolist())
     te_labels = set(y_te.unique().tolist())
     if not te_labels.issubset(tr_labels):
-        raise ValueError(f"Test labels {sorted(te_labels - tr_labels)} not seen in training")
+        raise ValueError(
+            f"Test labels {sorted(te_labels - tr_labels)} not seen in training"
+        )
 
     d = X_tr.shape[1]
     k = int(y_tr.max().item() + 1)
@@ -232,7 +268,9 @@ def train_probe(
                 tr_acc = accuracy(model(X_tr), y_tr)
                 te_acc = accuracy(model(X_te), y_te)
             avg_loss = total_loss / n
-            print(f"epoch {epoch:03d}  loss={avg_loss:.4f}  train_acc={tr_acc:.4f}  test_acc={te_acc:.4f}")
+            print(
+                f"epoch {epoch:03d}  loss={avg_loss:.4f}  train_acc={tr_acc:.4f}  test_acc={te_acc:.4f}"
+            )
             if te_acc > best_test_acc:
                 best_test_acc = te_acc
                 best_model = model.state_dict()
@@ -266,7 +304,9 @@ for loader in classification_dataset_loaders:
     X_te_cpu, y_te_cpu, _label_map2 = stack_dataset(test_items, label_to_idx=label_map)
 
     print(f"\n=== {name} ===")
-    print(f"train: {tuple(X_tr_cpu.shape)}  test: {tuple(X_te_cpu.shape)}  classes: {len(label_map)}")
+    print(
+        f"train: {tuple(X_tr_cpu.shape)}  test: {tuple(X_te_cpu.shape)}  classes: {len(label_map)}"
+    )
 
     tr_acc, te_acc = train_probe(
         X_tr_cpu,

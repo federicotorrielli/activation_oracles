@@ -94,7 +94,9 @@ for persona in persona_data:
         ground_truth_value = str(persona[prompt_type])
 
         # Create "yes" question (correct attribute)
-        question_yes = question_templates[prompt_type].format(name=persona_name, value=ground_truth_value)
+        question_yes = question_templates[prompt_type].format(
+            name=persona_name, value=ground_truth_value
+        )
         full_question_yes = instruction_prefix + question_yes
 
         all_prompts.append(
@@ -110,11 +112,17 @@ for persona in persona_data:
 
         # Create "no" question (wrong attribute)
         # Pick a random wrong value, seeded by persona name for reproducibility
-        remaining = [s for s in unique_attributes[prompt_type] if s.lower() != ground_truth_value.lower()]
+        remaining = [
+            s
+            for s in unique_attributes[prompt_type]
+            if s.lower() != ground_truth_value.lower()
+        ]
         random.seed(persona_name + prompt_type)
         wrong_value = random.choice(remaining)
 
-        question_no = question_templates[prompt_type].format(name=persona_name, value=wrong_value)
+        question_no = question_templates[prompt_type].format(
+            name=persona_name, value=wrong_value
+        )
         full_question_no = instruction_prefix + question_no
 
         all_prompts.append(
@@ -129,7 +137,9 @@ for persona in persona_data:
         )
 
 print(f"Generated {len(all_prompts)} prompts total")
-print(f"  ({len(persona_data)} personas x {len(prompt_types)} questions x 2 yes/no each)")
+print(
+    f"  ({len(persona_data)} personas x {len(prompt_types)} questions x 2 yes/no each)"
+)
 
 # ========================================
 # ITERATE OVER MODELS
@@ -303,7 +313,9 @@ for model_config in MODEL_CONFIGS:
 
         overall_accuracy = total_correct / total_count * 100
         print("-" * 60)
-        print(f"  {'OVERALL':25s}: {total_correct:3d}/{total_count:3d} ({overall_accuracy:5.1f}%)")
+        print(
+            f"  {'OVERALL':25s}: {total_correct:3d}/{total_count:3d} ({overall_accuracy:5.1f}%)"
+        )
 
         # Save results to JSON
         output_data = {

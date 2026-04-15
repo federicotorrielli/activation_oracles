@@ -29,6 +29,8 @@ We have pre-trained oracle weights for a variety for 12 different models across 
 
 The wandb eval / loss logs for these models are available [here](https://api.wandb.ai/links/adam-karvonen/cu11tv7r). Note that the smaller models (1-4B) tend to have worse OOD eval performance, so I'm not sure how well they will work.
 
+Additional notes on the Gemma 4 models trained under [`EvilScript`](https://huggingface.co/EvilScript), including the `gemma-4-31B-it` oracle and the taboo target-model family, are in [docs/evilscript_gemma4_report.md](docs/evilscript_gemma4_report.md).
+
 ## Training
 
 To train an Activation Oracle, use the training script with `torchrun`:

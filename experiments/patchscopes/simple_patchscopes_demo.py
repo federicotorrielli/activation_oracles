@@ -36,7 +36,9 @@ from pydantic import BaseModel
 import nl_probes.dataset_classes.classification as classification
 from nl_probes.utils.dataset_utils import TrainingDataPoint
 
-prompt_template = "Respond with only the answer and no other words. What is {prompt_target}this?"
+prompt_template = (
+    "Respond with only the answer and no other words. What is {prompt_target}this?"
+)
 
 raw_datapoints: list[classification.ClassificationDatapoint] = []
 for _, row in data.iterrows():
@@ -75,7 +77,9 @@ print("We will collect our activations using this prompt")
 print(f"\nThe classification prompt is: {raw_datapoints[0].classification_prompt}")
 print("This will be the prompt to our trained investigator model")
 print(f"\nThe target response is: {raw_datapoints[0].target_response}")
-print("This will be the training target for training, or the correct answer for evaluation")
+print(
+    "This will be the training target for training, or the correct answer for evaluation"
+)
 # %%
 from nl_probes.utils.common import load_model, load_tokenizer
 
@@ -259,7 +263,9 @@ for response, eval_data_point in zip(responses, training_data, strict=True):
     if compare_patchscope_responses(response, target_response):
         correct += 1
     else:
-        print(f"Response: {response}, Target: {target_response}, verbalizer prompt: {verbalizer_prompt}, context prompt: {context_prompt}")
+        print(
+            f"Response: {response}, Target: {target_response}, verbalizer prompt: {verbalizer_prompt}, context prompt: {context_prompt}"
+        )
 
 print(f"Correct: {correct}")
 print(f"Total: {len(training_data)}")

@@ -46,6 +46,12 @@ def test_enable_disable_adapters_simple(model_name):
     logits_restored = model(**inputs).logits
 
     # Assertions
-    assert (logits_on - logits_off).abs().max().item() > 1e-6, "Adapters did not change logits"
-    assert torch.allclose(logits_off, base_logits, rtol=1e-5, atol=1e-7), "Disabled adapters did not match base"
-    assert torch.allclose(logits_on, logits_restored, rtol=1e-5, atol=1e-7), "State not restored after re-enabling"
+    assert (logits_on - logits_off).abs().max().item() > 1e-6, (
+        "Adapters did not change logits"
+    )
+    assert torch.allclose(logits_off, base_logits, rtol=1e-5, atol=1e-7), (
+        "Disabled adapters did not match base"
+    )
+    assert torch.allclose(logits_on, logits_restored, rtol=1e-5, atol=1e-7), (
+        "State not restored after re-enabling"
+    )

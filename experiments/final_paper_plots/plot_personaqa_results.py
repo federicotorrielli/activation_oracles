@@ -97,7 +97,9 @@ def calculate_accuracy(record):
         full_seq_responses = record["full_sequence_responses"]
         # full_seq_responses = record["segment_responses"]
 
-        num_correct = sum(1 for resp in full_seq_responses if ground_truth in resp.lower())
+        num_correct = sum(
+            1 for resp in full_seq_responses if ground_truth in resp.lower()
+        )
         total = len(full_seq_responses)
 
         return num_correct / total if total > 0 else 0
@@ -174,7 +176,9 @@ def calculate_confidence_interval(accuracies, confidence=0.95):
     return margin
 
 
-def plot_results(results_by_lora, output_path, filter_labels=None, label_overrides=None):
+def plot_results(
+    results_by_lora, output_path, filter_labels=None, label_overrides=None
+):
     """Create a bar chart of average accuracy by investigator LoRA.
 
     Args:
@@ -206,7 +210,9 @@ def plot_results(results_by_lora, output_path, filter_labels=None, label_overrid
         ci_margin = calculate_confidence_interval(accuracies)
         error_bars.append(ci_margin)
 
-        print(f"{lora_name}: {mean_acc:.3f} ± {ci_margin:.3f} (n={len(accuracies)} records)")
+        print(
+            f"{lora_name}: {mean_acc:.3f} ± {ci_margin:.3f} (n={len(accuracies)} records)"
+        )
 
     # Print dictionary template for labels
     print("\n" + "=" * 60)
@@ -284,12 +290,20 @@ def plot_results(results_by_lora, output_path, filter_labels=None, label_overrid
     error_bars = [error_bars[i] for i in sorted_indices]
 
     # Get colors based on stored color map (preserves original colors even after label override)
-    colors = [color_map.get(label, get_colors_for_labels([label])[0]) for label in legend_labels]
+    colors = [
+        color_map.get(label, get_colors_for_labels([label])[0])
+        for label in legend_labels
+    ]
 
     # Create bar chart with consistent colors
     fig, ax = plt.subplots(figsize=(12, 6))
     bars = ax.bar(
-        range(len(lora_names)), mean_accuracies, color=colors, yerr=error_bars, capsize=5, error_kw={"linewidth": 2}
+        range(len(lora_names)),
+        mean_accuracies,
+        color=colors,
+        yerr=error_bars,
+        capsize=5,
+        error_kw={"linewidth": 2},
     )
 
     # Apply black stripes to "Full Dataset" or "Talkative Probe" bar
@@ -365,13 +379,20 @@ def plot_per_word_accuracy(results_by_lora_word):
         for w, accs in word_accuracies.items():
             mean_acc = sum(accs) / len(accs)
             ci = calculate_confidence_interval(accs)
-            print(f"{lora_name} - Word '{w}': {mean_acc:.3f} ± {ci:.3f} (n={len(accs)})")
+            print(
+                f"{lora_name} - Word '{w}': {mean_acc:.3f} ± {ci:.3f} (n={len(accs)})"
+            )
 
         # Create figure
         fig, ax = plt.subplots(figsize=(14, 6))
         colors = plt.cm.tab20(np.linspace(0, 1, len(words)))
         bars = ax.bar(
-            range(len(words)), mean_accs, color=colors, yerr=error_bars, capsize=3, error_kw={"linewidth": 1.5}
+            range(len(words)),
+            mean_accs,
+            color=colors,
+            yerr=error_bars,
+            capsize=3,
+            error_kw={"linewidth": 1.5},
         )
 
         ax.set_xlabel("Word", fontsize=FONT_SIZE_Y_AXIS_LABEL)
@@ -384,7 +405,13 @@ def plot_per_word_accuracy(results_by_lora_word):
 
         # Add horizontal line for overall mean
         overall_mean = sum(mean_accs) / len(mean_accs)
-        ax.axhline(y=overall_mean, color="red", linestyle="--", label=f"Overall mean: {overall_mean:.3f}", linewidth=2)
+        ax.axhline(
+            y=overall_mean,
+            color="red",
+            linestyle="--",
+            label=f"Overall mean: {overall_mean:.3f}",
+            linewidth=2,
+        )
         ax.legend()
 
         plt.tight_layout()
@@ -403,7 +430,9 @@ def main():
         print(f"{'=' * 60}\n")
 
         # Load results from all JSON files with current filter
-        results_by_lora, results_by_lora_word = load_results(OUTPUT_JSON_DIR, filter_filenames=filter_filenames)
+        results_by_lora, results_by_lora_word = load_results(
+            OUTPUT_JSON_DIR, filter_filenames=filter_filenames
+        )
 
         # Construct output path
         if include_sae_in_filename:
@@ -416,13 +445,9 @@ def main():
 
         # Plot 2: Filtered plot with only LatentQA, Full Dataset, Original Model, and random baseline (for main body)
         if include_sae_in_filename:
-            filtered_output_path = (
-                f"{CLS_IMAGE_FOLDER}/personaqa_results_{DATA_DIR}_{sequence_str}_{person_str}_main_body_sae.pdf"
-            )
+            filtered_output_path = f"{CLS_IMAGE_FOLDER}/personaqa_results_{DATA_DIR}_{sequence_str}_{person_str}_main_body_sae.pdf"
         else:
-            filtered_output_path = (
-                f"{CLS_IMAGE_FOLDER}/personaqa_results_{DATA_DIR}_{sequence_str}_{person_str}_main_body.pdf"
-            )
+            filtered_output_path = f"{CLS_IMAGE_FOLDER}/personaqa_results_{DATA_DIR}_{sequence_str}_{person_str}_main_body.pdf"
         plot_results(
             results_by_lora,
             filtered_output_path,
@@ -432,17 +457,19 @@ def main():
 
         # Plot 3: Filtered plot with Original Model, LatentQA, Classification, LatentQA + Classification, Full Dataset, and random baseline
         if include_sae_in_filename:
-            filtered_output_path_3 = (
-                f"{CLS_IMAGE_FOLDER}/personaqa_results_{DATA_DIR}_{sequence_str}_{person_str}_main_models_sae.pdf"
-            )
+            filtered_output_path_3 = f"{CLS_IMAGE_FOLDER}/personaqa_results_{DATA_DIR}_{sequence_str}_{person_str}_main_models_sae.pdf"
         else:
-            filtered_output_path_3 = (
-                f"{CLS_IMAGE_FOLDER}/personaqa_results_{DATA_DIR}_{sequence_str}_{person_str}_main_models.pdf"
-            )
+            filtered_output_path_3 = f"{CLS_IMAGE_FOLDER}/personaqa_results_{DATA_DIR}_{sequence_str}_{person_str}_main_models.pdf"
         plot_results(
             results_by_lora,
             filtered_output_path_3,
-            filter_labels=["Original Model", "LatentQA", "Classification", "LatentQA + Classification", "Full Dataset"],
+            filter_labels=[
+                "Original Model",
+                "LatentQA",
+                "Classification",
+                "LatentQA + Classification",
+                "Full Dataset",
+            ],
         )
 
         # doesn't make sense to plot per-word accuracy for personaqa

@@ -178,7 +178,9 @@ if __name__ == "__main__":
 
         verbalizer_prompts = [prefix + vp for vp in verbalizer_prompts]
 
-        pt_to_prompt: dict[str, str] = {k: v for k, v in zip(prompt_types, verbalizer_prompts)}
+        pt_to_prompt: dict[str, str] = {
+            k: v for k, v in zip(prompt_types, verbalizer_prompts)
+        }
 
         # Load tokenizer and model
         print(f"Loading tokenizer: {model_name}")
@@ -200,25 +202,35 @@ if __name__ == "__main__":
             verbalizer_results = []
             sanitized_verbalizer_name = None
             if verbalizer_lora_path is not None:
-                sanitized_verbalizer_name = base_experiment.load_lora_adapter(model, verbalizer_lora_path)
+                sanitized_verbalizer_name = base_experiment.load_lora_adapter(
+                    model, verbalizer_lora_path
+                )
 
             for target_lora_suffix in target_lora_suffixes:
                 target_lora_path = None
                 if target_lora_suffix is not None:
-                    target_lora_path = target_lora_path_template.format(lora_path=target_lora_suffix)
+                    target_lora_path = target_lora_path_template.format(
+                        lora_path=target_lora_suffix
+                    )
 
                 sanitized_target_name = None
                 if target_lora_path is not None:
-                    sanitized_target_name = base_experiment.load_lora_adapter(model, target_lora_path)
+                    sanitized_target_name = base_experiment.load_lora_adapter(
+                        model, target_lora_path
+                    )
 
-                print(f"Running verbalizer eval for verbalizer: {verbalizer_lora_path}, target: {target_lora_path}")
+                print(
+                    f"Running verbalizer eval for verbalizer: {verbalizer_lora_path}, target: {target_lora_path}"
+                )
 
                 # Build context prompts with ground truth
                 verbalizer_prompt_infos: list[VerbalizerInputInfo] = []
                 for context_prompt in context_prompts:
                     for persona in persona_data:
                         persona_name = persona["name"]
-                        formatted_context_prompt = context_prompt.format(name=persona_name)
+                        formatted_context_prompt = context_prompt.format(
+                            name=persona_name
+                        )
 
                         formatted_prompt = [
                             {"role": "user", "content": formatted_context_prompt},
@@ -238,8 +250,16 @@ if __name__ == "__main__":
                 # Show which combo is running alongside inner progress
                 combo_pbar.set_postfix(
                     {
-                        "verbalizer": (verbalizer_lora_path.split("/")[-1] if verbalizer_lora_path else "None"),
-                        "target": (target_lora_suffix.split("/")[-1] if target_lora_suffix else "None"),
+                        "verbalizer": (
+                            verbalizer_lora_path.split("/")[-1]
+                            if verbalizer_lora_path
+                            else "None"
+                        ),
+                        "target": (
+                            target_lora_suffix.split("/")[-1]
+                            if target_lora_suffix
+                            else "None"
+                        ),
                     }
                 )
 
@@ -254,7 +274,10 @@ if __name__ == "__main__":
                 )
                 verbalizer_results.extend(results)
 
-                if sanitized_target_name is not None and sanitized_target_name in model.peft_config:
+                if (
+                    sanitized_target_name is not None
+                    and sanitized_target_name in model.peft_config
+                ):
                     model.delete_adapter(sanitized_target_name)
 
                 combo_pbar.update(1)
@@ -271,7 +294,11 @@ if __name__ == "__main__":
                 if verbalizer_lora_path is None:
                     lora_name = "base_model"
                 else:
-                    lora_name = verbalizer_lora_path.split("/")[-1].replace("/", "_").replace(".", "_")
+                    lora_name = (
+                        verbalizer_lora_path.split("/")[-1]
+                        .replace("/", "_")
+                        .replace(".", "_")
+                    )
                     model.delete_adapter(sanitized_verbalizer_name)
 
                 output_json = output_json_template.format(lora=lora_name)

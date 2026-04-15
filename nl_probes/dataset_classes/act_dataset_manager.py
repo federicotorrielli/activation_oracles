@@ -29,7 +29,9 @@ class DatasetLoaderConfig:
     seed: int = 42
 
 
-def _config_hash(cfg: DatasetLoaderConfig, split: str, exclude: tuple[str, ...] = ("batch_size",)) -> str:
+def _config_hash(
+    cfg: DatasetLoaderConfig, split: str, exclude: tuple[str, ...] = ("batch_size",)
+) -> str:
     """
     Stable short hash over the full config + split.
     Excludes path-like fields so moving folders does not change the filename.
@@ -84,7 +86,9 @@ class ActDatasetLoader:
         print(f"Loaded {len(data)} datapoints from {filepath}")
         return data
 
-    def save_dataset(self, data: list[TrainingDataPoint], split: Literal["train", "test"]) -> None:
+    def save_dataset(
+        self, data: list[TrainingDataPoint], split: Literal["train", "test"]
+    ) -> None:
         data_filename = self.get_dataset_filename(split)
         data_path = os.path.join(self.dataset_config.dataset_folder, data_filename)
         torch.save(
@@ -97,7 +101,11 @@ class ActDatasetLoader:
         print(f"Saved {len(data)} {split} datapoints to {data_path}")
 
     def get_dataset_filename(self, split: Literal["train", "test"]) -> str:
-        num_datapoints = self.dataset_config.num_train if split == "train" else self.dataset_config.num_test
+        num_datapoints = (
+            self.dataset_config.num_train
+            if split == "train"
+            else self.dataset_config.num_test
+        )
 
         model_str = self.dataset_config.model_name.split("/")[-1]
 

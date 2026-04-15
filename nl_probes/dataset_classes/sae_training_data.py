@@ -13,7 +13,11 @@ from pydantic import BaseModel
 import nl_probes.autointerp_detection_eval.caller as caller
 from nl_probes.autointerp_detection_eval.detection_basemodels import SAEInfo
 from nl_probes.configs.sft_config import SelfInterpTrainingConfig
-from nl_probes.dataset_classes.act_dataset_manager import ActDatasetLoader, BaseDatasetConfig, DatasetLoaderConfig
+from nl_probes.dataset_classes.act_dataset_manager import (
+    ActDatasetLoader,
+    BaseDatasetConfig,
+    DatasetLoaderConfig,
+)
 from nl_probes.sae import BaseSAE, get_sae_info, load_max_acts_data, load_sae
 from nl_probes.utils.common import load_tokenizer
 from nl_probes.utils.dataset_utils import (
@@ -58,14 +62,18 @@ class TrainingExample(BaseModel):
     feature_idx: int
 
     @classmethod
-    def with_positive_and_negative_examples(cls, sae_explanation: SAEExplained) -> "TrainingExample":
+    def with_positive_and_negative_examples(
+        cls, sae_explanation: SAEExplained
+    ) -> "TrainingExample":
         raise NotImplementedError("Not implemented")
         positive_examples_text = "".join(
-            f"<positive_example>{example}</positive_example>\n" for example in sae_explanation.positive_examples
+            f"<positive_example>{example}</positive_example>\n"
+            for example in sae_explanation.positive_examples
         )
 
         negative_examples_text = "".join(
-            f"<negative_example>{example}</negative_example>\n" for example in sae_explanation.negative_examples
+            f"<negative_example>{example}</negative_example>\n"
+            for example in sae_explanation.negative_examples
         )
 
         prompt = f"""{positive_examples_text.rstrip()}
@@ -180,17 +188,27 @@ Please generate four Yes / No questions, and try have some variety in the phrasi
 class SAEActivatingSequencesDatasetLoader(ActDatasetLoader):
     def __init__(self, dataset_config: DatasetLoaderConfig):
         super().__init__(dataset_config)
-        if not isinstance(dataset_config.custom_dataset_params, SAEActivatingSequencesDatasetConfig):
+        if not isinstance(
+            dataset_config.custom_dataset_params, SAEActivatingSequencesDatasetConfig
+        ):
             raise TypeError("Expected SAEActivatingSequencesDatasetConfig")
-        self.dataset_params: SAEActivatingSequencesDatasetConfig = dataset_config.custom_dataset_params
+        self.dataset_params: SAEActivatingSequencesDatasetConfig = (
+            dataset_config.custom_dataset_params
+        )
 
-        assert self.dataset_config.dataset_name == "", "Dataset name gets overridden for SAE activating sequences"
+        assert self.dataset_config.dataset_name == "", (
+            "Dataset name gets overridden for SAE activating sequences"
+        )
 
         dataset_name = f"sae_activating_sequences_{self.dataset_params.sae_repo_id}_layer_percent_{self.dataset_config.layer_percents[0]}"
         self.dataset_config.dataset_name = dataset_name
 
-        assert self.dataset_config.splits == ["train"], "SAE activating sequences dataset only supports train split"
-        assert self.dataset_config.num_test == 0, "SAE activating sequences dataset does not support a test split"
+        assert self.dataset_config.splits == ["train"], (
+            "SAE activating sequences dataset only supports train split"
+        )
+        assert self.dataset_config.num_test == 0, (
+            "SAE activating sequences dataset does not support a test split"
+        )
         assert len(self.dataset_config.layer_percents) == 1, (
             "SAE activating sequences dataset only supports one layer percent"
         )
@@ -218,15 +236,27 @@ class SAEYesNoDatasetLoader(ActDatasetLoader):
         if not isinstance(dataset_config.custom_dataset_params, SAEYesNoDatasetConfig):
             raise TypeError("Expected SAEYesNoDatasetConfig")
 
-        assert self.dataset_config.splits == ["train"], "SAE explanation dataset only supports train split"
-        assert self.dataset_config.num_test == 0, "SAE explanation dataset does not support a test split"
-        assert len(self.dataset_config.layer_percents) == 1, "SAE explanation dataset only supports one layer percent"
+        assert self.dataset_config.splits == ["train"], (
+            "SAE explanation dataset only supports train split"
+        )
+        assert self.dataset_config.num_test == 0, (
+            "SAE explanation dataset does not support a test split"
+        )
+        assert len(self.dataset_config.layer_percents) == 1, (
+            "SAE explanation dataset only supports one layer percent"
+        )
 
-        self.dataset_params: SAEYesNoDatasetConfig = dataset_config.custom_dataset_params
+        self.dataset_params: SAEYesNoDatasetConfig = (
+            dataset_config.custom_dataset_params
+        )
 
-        assert self.dataset_config.dataset_name == "", "Dataset name gets overridden for SAE Yes/No dataset"
+        assert self.dataset_config.dataset_name == "", (
+            "Dataset name gets overridden for SAE Yes/No dataset"
+        )
 
-        self.dataset_config.dataset_name = f"sae_yes_no_{self.dataset_params.sft_data_file}"
+        self.dataset_config.dataset_name = (
+            f"sae_yes_no_{self.dataset_params.sft_data_file}"
+        )
 
     def create_dataset(self) -> None:
         training_data, sae_info = create_yes_no_data(
@@ -248,17 +278,31 @@ class SAEYesNoDatasetLoader(ActDatasetLoader):
 class SAEExplanationDatasetLoader(ActDatasetLoader):
     def __init__(self, dataset_config: DatasetLoaderConfig):
         super().__init__(dataset_config)
-        if not isinstance(dataset_config.custom_dataset_params, SAEExplanationDatasetConfig):
+        if not isinstance(
+            dataset_config.custom_dataset_params, SAEExplanationDatasetConfig
+        ):
             raise TypeError("Expected SAEExplanationDatasetConfig")
-        assert self.dataset_config.splits == ["train"], "SAE explanation dataset only supports train split"
-        assert self.dataset_config.num_test == 0, "SAE explanation dataset does not support a test split"
-        assert len(self.dataset_config.layer_percents) == 1, "SAE explanation dataset only supports one layer percent"
+        assert self.dataset_config.splits == ["train"], (
+            "SAE explanation dataset only supports train split"
+        )
+        assert self.dataset_config.num_test == 0, (
+            "SAE explanation dataset does not support a test split"
+        )
+        assert len(self.dataset_config.layer_percents) == 1, (
+            "SAE explanation dataset only supports one layer percent"
+        )
 
-        self.dataset_params: SAEExplanationDatasetConfig = dataset_config.custom_dataset_params
+        self.dataset_params: SAEExplanationDatasetConfig = (
+            dataset_config.custom_dataset_params
+        )
 
-        assert self.dataset_config.dataset_name == "", "Dataset name gets overridden for SAE explanation dataset"
+        assert self.dataset_config.dataset_name == "", (
+            "Dataset name gets overridden for SAE explanation dataset"
+        )
 
-        self.dataset_config.dataset_name = f"sae_explanations_{self.dataset_params.sft_data_file}"
+        self.dataset_config.dataset_name = (
+            f"sae_explanations_{self.dataset_params.sft_data_file}"
+        )
 
     def create_dataset(self) -> None:
         training_data, sae_info = load_sae_data_from_sft_data_file(
@@ -298,7 +342,14 @@ def create_activating_sequences_data(
     save_filename = save_filename.replace("/", "_").replace(".", "_").replace(" ", "_")
     save_filename = f"{sft_data_folder}/{save_filename}.pkl"
 
-    sae = load_sae(sae_info.sae_repo_id, sae_info.sae_filename, sae_info.sae_layer, model_name, device, dtype)
+    sae = load_sae(
+        sae_info.sae_repo_id,
+        sae_info.sae_filename,
+        sae_info.sae_layer,
+        model_name,
+        device,
+        dtype,
+    )
 
     max_acts_data = load_max_acts_data(
         model_name=model_name,
@@ -476,7 +527,14 @@ Please generate four Yes / No questions, and try have some variety in the phrasi
     save_filename = save_filename.replace("/", "_").replace(".", "_").replace(" ", "_")
     save_filename = f"{sft_data_folder}/{save_filename}.pkl"
 
-    sae = load_sae(sae_info.sae_repo_id, sae_info.sae_filename, sae_info.sae_layer, model_name, device, dtype)
+    sae = load_sae(
+        sae_info.sae_repo_id,
+        sae_info.sae_filename,
+        sae_info.sae_layer,
+        model_name,
+        device,
+        dtype,
+    )
 
     llm_prompts = []
 
@@ -608,14 +666,21 @@ def load_sae_data_from_sft_data_file(
     device: torch.device,
     dtype: torch.dtype,
 ) -> tuple[list[TrainingDataPoint], SAEInfo]:
-    explanations: list[SAEExplained] = load_explanations_from_jsonl(custom_dataset_params.sft_data_file)
+    explanations: list[SAEExplained] = load_explanations_from_jsonl(
+        custom_dataset_params.sft_data_file
+    )
     orig_sae_info = explanations[0].sae_info
     for data_point in explanations:
         assert data_point.sae_info == orig_sae_info
     sae_info = SAEInfo.model_validate(orig_sae_info)
 
     sae = load_sae(
-        sae_info.sae_repo_id, sae_info.sae_filename, sae_info.sae_layer, dataset_config.model_name, device, dtype
+        sae_info.sae_repo_id,
+        sae_info.sae_filename,
+        sae_info.sae_layer,
+        dataset_config.model_name,
+        device,
+        dtype,
     )
 
     training_examples = [
@@ -624,7 +689,9 @@ def load_sae_data_from_sft_data_file(
         else TrainingExample.with_explanation_only(exp)
         for exp in explanations
     ]
-    print(f"Loaded {len(training_examples)} training examples from {custom_dataset_params.sft_data_file}")
+    print(
+        f"Loaded {len(training_examples)} training examples from {custom_dataset_params.sft_data_file}"
+    )
 
     train_features = set()
 

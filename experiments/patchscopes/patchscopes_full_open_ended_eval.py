@@ -19,7 +19,10 @@ from peft import LoraConfig
 from transformers import AutoModelForCausalLM, AutoTokenizer
 
 # nl_probes imports
-from nl_probes.utils.activation_utils import collect_activations_multiple_layers, get_hf_submodule
+from nl_probes.utils.activation_utils import (
+    collect_activations_multiple_layers,
+    get_hf_submodule,
+)
 from nl_probes.utils.common import load_model, load_tokenizer, layer_percent_to_layer
 from nl_probes.utils.dataset_utils import TrainingDataPoint, create_training_datapoint
 from nl_probes.utils.eval import run_evaluation
@@ -84,7 +87,9 @@ OUTPUT_JSON_DIR: str = f"{EXPERIMENTS_DIR}/{model_name_str}_open_ended"
 os.makedirs(EXPERIMENTS_DIR, exist_ok=True)
 os.makedirs(OUTPUT_JSON_DIR, exist_ok=True)
 # Optional: save results to disk as JSON
-OUTPUT_JSON_TEMPLATE: Optional[str] = f"{OUTPUT_JSON_DIR}/" + "patchscopes_results_open_{lora}.json"
+OUTPUT_JSON_TEMPLATE: Optional[str] = (
+    f"{OUTPUT_JSON_DIR}/" + "patchscopes_results_open_{lora}.json"
+)
 
 # ========================================
 # PROMPT TYPES AND QUESTIONS
@@ -133,7 +138,9 @@ def compare_patchscope_responses(response: str, target_response: str) -> bool:
     return target_response in response
 
 
-def build_prompts_and_targets(df: pd.DataFrame, tokenizer: AutoTokenizer) -> tuple[list[str], list[str], list[str]]:
+def build_prompts_and_targets(
+    df: pd.DataFrame, tokenizer: AutoTokenizer
+) -> tuple[list[str], list[str], list[str]]:
     """Create chat prompts and targets for a single dataset file."""
     prompts: list[str] = []
     targets: list[str] = []
@@ -164,10 +171,12 @@ def build_prompts_and_targets(df: pd.DataFrame, tokenizer: AutoTokenizer) -> tup
         targets.append(row["object"])  # ground truth answer
         context_prompts.append(source)
 
-    return prompts, targets, context_prompts    
+    return prompts, targets, context_prompts
 
 
-def get_all_patchscopes_prompts(files: list[str], tokenizer: AutoTokenizer, max_words: int | None) -> list[tuple[str, str, str, str]]:
+def get_all_patchscopes_prompts(
+    files: list[str], tokenizer: AutoTokenizer, max_words: int | None
+) -> list[tuple[str, str, str, str]]:
     all_prompts = []
     for file in files:
         df = pd.read_csv(os.path.join(FOLDER, file), sep="\t")
@@ -176,13 +185,18 @@ def get_all_patchscopes_prompts(files: list[str], tokenizer: AutoTokenizer, max_
             prompts = prompts[:max_words]
             targets = targets[:max_words]
             context_prompts = context_prompts[:max_words]
-        for prompt, target, context in zip(prompts, targets, context_prompts, strict=True):
+        for prompt, target, context in zip(
+            prompts, targets, context_prompts, strict=True
+        ):
             all_prompts.append((prompt, target, context, file))
 
     return all_prompts
 
 
-all_patchscopes_prompts = get_all_patchscopes_prompts(tsv_files, tokenizer=tokenizer, max_words=MAX_WORDS)
+all_patchscopes_prompts = get_all_patchscopes_prompts(
+    tsv_files, tokenizer=tokenizer, max_words=MAX_WORDS
+)
+
 
 def encode_messages(
     tokenizer: AutoTokenizer,
@@ -200,7 +214,9 @@ def encode_messages(
             enable_thinking=enable_thinking,
         )
         messages.append(rendered)
-    inputs_BL = tokenizer(messages, return_tensors="pt", add_special_tokens=False, padding=True).to(device)
+    inputs_BL = tokenizer(
+        messages, return_tensors="pt", add_special_tokens=False, padding=True
+    ).to(device)
     return inputs_BL
 
 
@@ -405,7 +421,12 @@ for INVESTIGATOR_LORA_PATH in INVESTIGATOR_LORA_PATHS:
         "records": [],
     }
 
-    for patchscopes_prompt, ground_truth, context_prompt, source_file in all_patchscopes_prompts:
+    for (
+        patchscopes_prompt,
+        ground_truth,
+        context_prompt,
+        source_file,
+    ) in all_patchscopes_prompts:
         # Build a simple user message per persona
         test_message = [{"role": "user", "content": context_prompt}]
         message_dicts = [test_message]
@@ -472,7 +493,9 @@ for INVESTIGATOR_LORA_PATH in INVESTIGATOR_LORA_PATHS:
                 r = responses[i].api_response.lower().strip()
                 token_responses.append(r)
 
-            full_sequence_responses = [responses[-i - 1].api_response for i in range(10)]
+            full_sequence_responses = [
+                responses[-i - 1].api_response for i in range(10)
+            ]
 
             # Store a flat record
             record = {
@@ -493,7 +516,9 @@ for INVESTIGATOR_LORA_PATH in INVESTIGATOR_LORA_PATHS:
 
     # Optionally save to JSON
     if OUTPUT_JSON_TEMPLATE is not None:
-        lora_name = INVESTIGATOR_LORA_PATH.split("/")[-1].replace("/", "_").replace(".", "_")
+        lora_name = (
+            INVESTIGATOR_LORA_PATH.split("/")[-1].replace("/", "_").replace(".", "_")
+        )
         OUTPUT_JSON = OUTPUT_JSON_TEMPLATE.format(lora=lora_name)
         with open(OUTPUT_JSON, "w") as f:
             json.dump(results, f, indent=2)

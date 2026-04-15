@@ -99,7 +99,15 @@ ACCEPTABLE_MATCHES = {
     "baduk": ["baduk", "go"],
     "go": ["go", "baduk"],
     # Countries
-    "united states": ["united states", "usa", "us", "america", "united states of america", "u.s.", "u.s.a."],
+    "united states": [
+        "united states",
+        "usa",
+        "us",
+        "america",
+        "united states of america",
+        "u.s.",
+        "u.s.a.",
+    ],
 }
 
 
@@ -200,9 +208,17 @@ def calculate_accuracy(record, offset, sequence=False, is_open_ended=False):
         # full_seq_responses = record["segment_responses"]
 
         if is_open_ended:
-            num_correct = sum(1 for resp in full_seq_responses if check_answer_match(ground_truth, resp))
+            num_correct = sum(
+                1
+                for resp in full_seq_responses
+                if check_answer_match(ground_truth, resp)
+            )
         else:
-            num_correct = sum(1 for resp in full_seq_responses if check_yes_no_match(ground_truth, resp))
+            num_correct = sum(
+                1
+                for resp in full_seq_responses
+                if check_yes_no_match(ground_truth, resp)
+            )
         total = len(full_seq_responses)
 
         return num_correct / total if total > 0 else 0
@@ -211,9 +227,13 @@ def calculate_accuracy(record, offset, sequence=False, is_open_ended=False):
         responses = record["token_responses"][offset : offset + 1]
 
         if is_open_ended:
-            num_correct = sum(1 for resp in responses if check_answer_match(ground_truth, resp))
+            num_correct = sum(
+                1 for resp in responses if check_answer_match(ground_truth, resp)
+            )
         else:
-            num_correct = sum(1 for resp in responses if check_yes_no_match(ground_truth, resp))
+            num_correct = sum(
+                1 for resp in responses if check_yes_no_match(ground_truth, resp)
+            )
         total = len(responses)
 
         return num_correct / total if total > 0 else 0
@@ -335,7 +355,9 @@ def load_claude_results(is_open_ended=False, sequence=False):
             }
 
 
-def load_results_from_folder(folder_path, model_name, sequence=False, is_open_ended=False, verbose=False):
+def load_results_from_folder(
+    folder_path, model_name, sequence=False, is_open_ended=False, verbose=False
+):
     """Load all JSON results from folder and calculate accuracies keyed by LoRA name.
 
     Args:
@@ -359,7 +381,11 @@ def load_results_from_folder(folder_path, model_name, sequence=False, is_open_en
 
     # Filter out files based on FILTERED_FILENAMES
     if FILTERED_FILENAMES:
-        json_files = [f for f in json_files if not any(filter_str in f.name for filter_str in FILTERED_FILENAMES)]
+        json_files = [
+            f
+            for f in json_files
+            if not any(filter_str in f.name for filter_str in FILTERED_FILENAMES)
+        ]
 
     if verbose:
         print(f"Found {len(json_files)} JSON files (after filtering)")
@@ -382,7 +408,9 @@ def load_results_from_folder(folder_path, model_name, sequence=False, is_open_en
         for record in records:
             if record.get("act_key") != "lora":
                 continue
-            accuracy = calculate_accuracy(record, offset, sequence=sequence, is_open_ended=is_open_ended)
+            accuracy = calculate_accuracy(
+                record, offset, sequence=sequence, is_open_ended=is_open_ended
+            )
             accuracies.append(accuracy)
 
         if accuracies:
@@ -396,7 +424,9 @@ def load_results_from_folder(folder_path, model_name, sequence=False, is_open_en
             }
 
             if verbose:
-                print(f"{lora_name}: {mean_acc:.3f} ± {ci_margin:.3f} (n={len(accuracies)} records)")
+                print(
+                    f"{lora_name}: {mean_acc:.3f} ± {ci_margin:.3f} (n={len(accuracies)} records)"
+                )
 
     return results
 
@@ -449,7 +479,9 @@ def _collect_stats(results: dict, highlight_keyword: str):
 
     # Find and require exactly one highlighted entry, move it to index 0
     matches = [i for i, n in enumerate(names) if highlight_keyword in n]
-    assert len(matches) == 1, f"Keyword '{highlight_keyword}' matched {len(matches)}: {[names[i] for i in matches]}"
+    assert len(matches) == 1, (
+        f"Keyword '{highlight_keyword}' matched {len(matches)}: {[names[i] for i in matches]}"
+    )
     m = matches[0]
     order = [m] + [i for i in range(len(names)) if i != m]
 
@@ -533,7 +565,14 @@ def _plot_results_panel(
 ):
     """Plot a single panel with bars using shared palette."""
     colors = [palette[label] for label in labels]
-    bars = ax.bar(range(len(names)), means, color=colors, yerr=cis, capsize=5, error_kw={"linewidth": 2})
+    bars = ax.bar(
+        range(len(names)),
+        means,
+        color=colors,
+        yerr=cis,
+        capsize=5,
+        error_kw={"linewidth": 2},
+    )
     # Keep palette color; only add hatch and stroke for the highlighted (index 0)
     _style_highlight(bars[0], color=bars[0].get_facecolor())
 
@@ -603,7 +642,9 @@ def plot_all_models(
         names, means, cis = _collect_stats(results, highlight_keyword)
         labels = _legend_labels(names, CUSTOM_LABELS)
         # Filter to only allowed labels
-        names, labels, means, cis = filter_by_allowed_labels(names, labels, means, cis, allowed_labels=filter_labels)
+        names, labels, means, cis = filter_by_allowed_labels(
+            names, labels, means, cis, allowed_labels=filter_labels
+        )
         # Apply label overrides if provided
         if label_overrides is not None:
             labels = [label_overrides.get(label, label) for label in labels]
@@ -637,7 +678,10 @@ def plot_all_models(
     if label_overrides is not None:
         for original_label, new_label in label_overrides.items():
             if original_label == "Full Dataset" and new_label == "Activation Oracle":
-                if "Full Dataset" in shared_palette and "Activation Oracle" in unique_labels:
+                if (
+                    "Full Dataset" in shared_palette
+                    and "Activation Oracle" in unique_labels
+                ):
                     shared_palette["Activation Oracle"] = shared_palette["Full Dataset"]
 
     # Plot each model
@@ -645,7 +689,14 @@ def plot_all_models(
         zip(all_names, all_labels, all_means, all_cis, model_names)
     ):
         _plot_results_panel(
-            axes[idx], names, labels, means, cis, title=model_name, palette=shared_palette, show_ylabel=(idx == 0)
+            axes[idx],
+            names,
+            labels,
+            means,
+            cis,
+            title=model_name,
+            palette=shared_palette,
+            show_ylabel=(idx == 0),
         )
 
     # Add random chance baseline to all subplots (only for yes/no, not open-ended)
@@ -662,28 +713,57 @@ def plot_all_models(
         highlight_labels.append("Activation Oracle")
 
     # Define specific order for non-highlight labels (matching original: LatentQA, Original Model)
-    legend_order = ["SPQA Only (Pan et al.)", "SPQA + Classification", "Classification", "Original Model"]
+    legend_order = [
+        "SPQA Only (Pan et al.)",
+        "SPQA + Classification",
+        "Classification",
+        "Original Model",
+    ]
     other_labels = []
     # Add labels in the specified order if they exist
     for label in legend_order:
         if label in unique_labels and label not in highlight_labels:
             other_labels.append(label)
     # Add any remaining labels alphabetically
-    remaining = sorted([lab for lab in unique_labels if lab not in highlight_labels and lab not in other_labels])
+    remaining = sorted(
+        [
+            lab
+            for lab in unique_labels
+            if lab not in highlight_labels and lab not in other_labels
+        ]
+    )
     other_labels.extend(remaining)
 
-    ordered_labels = highlight_labels + other_labels if highlight_labels else unique_labels
+    ordered_labels = (
+        highlight_labels + other_labels if highlight_labels else unique_labels
+    )
 
     handles = []
     for lab in ordered_labels:
         if lab in highlight_labels:
-            handles.append(Patch(facecolor=shared_palette[lab], edgecolor="black", hatch="////", label=lab))
+            handles.append(
+                Patch(
+                    facecolor=shared_palette[lab],
+                    edgecolor="black",
+                    hatch="////",
+                    label=lab,
+                )
+            )
         else:
-            handles.append(Patch(facecolor=shared_palette[lab], edgecolor="black", label=lab))
+            handles.append(
+                Patch(facecolor=shared_palette[lab], edgecolor="black", label=lab)
+            )
 
     # Add baseline to legend (only for yes/no)
     if not is_open_ended:
-        baseline_handle = Line2D([0], [0], color="red", linestyle="--", linewidth=2, label="Random Chance Baseline")
+        baseline_handle = Line2D(
+            [0],
+            [0],
+            color="red",
+            linestyle="--",
+            linewidth=2,
+            label="Random Chance Baseline",
+        )
         handles.append(baseline_handle)
 
     # Adjust legend position: move down more for yes/no (has baseline), less for open-ended
@@ -722,8 +802,12 @@ def main():
                 if model == "Claude":
                     # Load hardcoded Claude results
                     # Use 3-tok for sequence-level, 1-tok for token-level
-                    print(f"Loading Claude results (hardcoded, {'3-tok' if sequence else '1-tok'})")
-                    results = load_claude_results(is_open_ended=is_open_ended, sequence=sequence)
+                    print(
+                        f"Loading Claude results (hardcoded, {'3-tok' if sequence else '1-tok'})"
+                    )
+                    results = load_claude_results(
+                        is_open_ended=is_open_ended, sequence=sequence
+                    )
                     if not results:
                         print("Warning: No Claude results found!")
                 else:
@@ -731,7 +815,11 @@ def main():
                     run_dir = f"experiments/personaqa_results/{model}_{task_type}"
                     print(f"Loading results from: {run_dir}")
                     results = load_results_from_folder(
-                        run_dir, model, sequence=sequence, is_open_ended=is_open_ended, verbose=VERBOSE
+                        run_dir,
+                        model,
+                        sequence=sequence,
+                        is_open_ended=is_open_ended,
+                        verbose=VERBOSE,
                     )
                     if not results:
                         print(f"Warning: No JSON files found in {run_dir}!")
@@ -739,7 +827,9 @@ def main():
                 print()
 
             if not any(all_results):
-                print(f"No JSON files found in any of the specified folders for {task_display} - {level_str}!")
+                print(
+                    f"No JSON files found in any of the specified folders for {task_display} - {level_str}!"
+                )
                 continue
 
             # Construct output path
@@ -757,14 +847,22 @@ def main():
             )
 
             # Plot 2: Main body models only (activation oracle, original model, QA model)
-            main_body_output_path_base = f"{OUTPUT_PATH_BASE}_{task_type}_{sequence_str}_main_body"
-            print(f"\nGenerating {task_display} - {level_str} plot with main body models...")
+            main_body_output_path_base = (
+                f"{OUTPUT_PATH_BASE}_{task_type}_{sequence_str}_main_body"
+            )
+            print(
+                f"\nGenerating {task_display} - {level_str} plot with main body models..."
+            )
             plot_all_models(
                 all_results,
                 HIGHLIGHT_KEYWORDS,
                 MODEL_NAMES,
                 main_body_output_path_base,
-                filter_labels=["SPQA Only (Pan et al.)", "Full Dataset", "Original Model"],
+                filter_labels=[
+                    "SPQA Only (Pan et al.)",
+                    "Full Dataset",
+                    "Original Model",
+                ],
                 label_overrides={"Full Dataset": "Activation Oracle"},
                 is_open_ended=is_open_ended,
                 sequence=sequence,

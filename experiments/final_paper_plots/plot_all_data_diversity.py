@@ -27,14 +27,16 @@ LAYER_NUMBER = 50  # Set to None to use original classification directory
 # Configuration for each eval type
 if LAYER_NUMBER is not None:
     # Use classification_layer_sweep directory for specified layer
-    CLASSIFICATION_RUN_DIR = (
-        f"experiments/classification_layer_sweep/classification_Qwen3-8B_single_token_{LAYER_NUMBER}"
-    )
+    CLASSIFICATION_RUN_DIR = f"experiments/classification_layer_sweep/classification_Qwen3-8B_single_token_{LAYER_NUMBER}"
 else:
     # Original directory
-    CLASSIFICATION_RUN_DIR = "experiments/classification/classification_Qwen3-8B_single_token"
+    CLASSIFICATION_RUN_DIR = (
+        "experiments/classification/classification_Qwen3-8B_single_token"
+    )
 PERSONAQA_OUTPUT_JSON_DIR = "experiments/personaqa_results/Qwen3-8B_open_ended"
-TABOO_OUTPUT_JSON_DIR = "experiments/taboo_eval_results/Qwen3-8B_open_ended_all_direct_test"
+TABOO_OUTPUT_JSON_DIR = (
+    "experiments/taboo_eval_results/Qwen3-8B_open_ended_all_direct_test"
+)
 
 # Eval type names for subplot titles
 EVAL_TYPE_NAMES = [
@@ -120,7 +122,10 @@ def calculate_accuracy(records, dataset_ids):
     for record in records:
         if record["dataset_id"] in dataset_ids:
             total += 1
-            if record["target"].lower().strip() in record["ground_truth"].lower().strip():
+            if (
+                record["target"].lower().strip()
+                in record["ground_truth"].lower().strip()
+            ):
                 correct += 1
 
     if total == 0:
@@ -164,7 +169,11 @@ def load_classification_results(folder_path):
 
     # Filter out files based on FILTERED_FILENAMES
     if FILTERED_FILENAMES:
-        json_files = [f for f in json_files if not any(filter_str in f.name for filter_str in FILTERED_FILENAMES)]
+        json_files = [
+            f
+            for f in json_files
+            if not any(filter_str in f.name for filter_str in FILTERED_FILENAMES)
+        ]
 
     # Apply filename include filter
     if INCLUDE_FILENAMES:
@@ -225,7 +234,15 @@ ACCEPTABLE_MATCHES = {
     "baduk": ["baduk", "go"],
     "go": ["go", "baduk"],
     # Countries
-    "united states": ["united states", "usa", "us", "america", "united states of america", "u.s.", "u.s.a."],
+    "united states": [
+        "united states",
+        "usa",
+        "us",
+        "america",
+        "united states of america",
+        "u.s.",
+        "u.s.a.",
+    ],
 }
 
 
@@ -251,7 +268,9 @@ def calculate_personaqa_accuracy(record):
     ground_truth = record["ground_truth"]
     full_seq_responses = record["full_sequence_responses"]
 
-    num_correct = sum(1 for resp in full_seq_responses if check_answer_match(ground_truth, resp))
+    num_correct = sum(
+        1 for resp in full_seq_responses if check_answer_match(ground_truth, resp)
+    )
     total = len(full_seq_responses)
 
     return num_correct / total if total > 0 else 0
@@ -319,7 +338,9 @@ def load_personaqa_results(json_dir):
 # ========== Taboo Functions ==========
 
 
-def calculate_taboo_accuracy(record: dict, investigator_lora: str | None, model_name: str) -> float:
+def calculate_taboo_accuracy(
+    record: dict, investigator_lora: str | None, model_name: str
+) -> float:
     """Calculate accuracy for Taboo record - exactly matching original script logic."""
     # Determine index based on model (matching original script logic exactly)
     if investigator_lora is None:
@@ -370,7 +391,9 @@ def load_taboo_results(json_dir: str):
         model_name = "Unknown"
 
     # Filter by verbalizer_prompt (matching original script: chosen_prompt)
-    required_verbalizer_prompt = "Answer with a single word only. What is the secret word in this text?"
+    required_verbalizer_prompt = (
+        "Answer with a single word only. What is the secret word in this text?"
+    )
 
     json_files = list(json_dir_path.glob("*.json"))
 
@@ -395,7 +418,10 @@ def load_taboo_results(json_dir: str):
         # Calculate accuracy for each record (matching original script exactly)
         for record in data["results"]:
             # Filter by verbalizer_prompt (matching original script line 171)
-            if required_verbalizer_prompt and record["verbalizer_prompt"] != required_verbalizer_prompt:
+            if (
+                required_verbalizer_prompt
+                and record["verbalizer_prompt"] != required_verbalizer_prompt
+            ):
                 continue
             accuracy = calculate_taboo_accuracy(record, investigator_lora, model_name)
             results_by_lora[investigator_lora].append(accuracy)
@@ -457,7 +483,9 @@ def _collect_stats(results: dict, highlight_keyword: str):
 
     # Find and require exactly one highlighted entry, move it to index 0
     matches = [i for i, n in enumerate(names) if highlight_keyword in n]
-    assert len(matches) == 1, f"Keyword '{highlight_keyword}' matched {len(matches)}: {[names[i] for i in matches]}"
+    assert len(matches) == 1, (
+        f"Keyword '{highlight_keyword}' matched {len(matches)}: {[names[i] for i in matches]}"
+    )
     m = matches[0]
     order = [m] + [i for i in range(len(names)) if i != m]
 
@@ -517,7 +545,14 @@ def _plot_results_panel(
         if "(Data Matched)" in label or ("Full Dataset" in label and "400k" in label):
             colors[i] = (1.0, 0.0, 0.0, 1.0)  # Red
 
-    bars = ax.bar(range(len(names)), means, color=colors, yerr=cis, capsize=5, error_kw={"linewidth": 2})
+    bars = ax.bar(
+        range(len(names)),
+        means,
+        color=colors,
+        yerr=cis,
+        capsize=5,
+        error_kw={"linewidth": 2},
+    )
     # Keep palette color; only add hatch and stroke for the highlighted (index 0)
     _style_highlight(bars[0], color=bars[0].get_facecolor())
 
@@ -541,7 +576,9 @@ def _plot_results_panel(
         )
 
 
-def plot_all_eval_types(all_results, highlight_keywords, eval_type_names, output_path_base):
+def plot_all_eval_types(
+    all_results, highlight_keywords, eval_type_names, output_path_base
+):
     """Create a single plot with all three eval types as subplots."""
     output_path = f"{output_path_base}.pdf"
 
@@ -583,7 +620,14 @@ def plot_all_eval_types(all_results, highlight_keywords, eval_type_names, output
         zip(all_names, all_labels, all_means, all_cis, eval_type_names)
     ):
         _plot_results_panel(
-            axes[idx], names, labels, means, cis, title=eval_name, palette=shared_palette, show_ylabel=(idx == 0)
+            axes[idx],
+            names,
+            labels,
+            means,
+            cis,
+            title=eval_name,
+            palette=shared_palette,
+            show_ylabel=(idx == 0),
         )
 
     # Single shared legend - put highlight labels first
@@ -594,17 +638,30 @@ def plot_all_eval_types(all_results, highlight_keywords, eval_type_names, output
         or lab == "Full Dataset (1M samples)"
     ]
     other_labels = sorted([lab for lab in unique_labels if lab not in highlight_labels])
-    ordered_labels = highlight_labels + other_labels if highlight_labels else unique_labels
+    ordered_labels = (
+        highlight_labels + other_labels if highlight_labels else unique_labels
+    )
 
     handles = []
     for lab in ordered_labels:
         # Check if this is a Full Dataset (400k samples) label (should be red)
         if "(Data Matched)" in lab or ("Full Dataset" in lab and "400k" in lab):
-            handles.append(Patch(facecolor=(1.0, 0.0, 0.0, 1.0), edgecolor="black", label=lab))
+            handles.append(
+                Patch(facecolor=(1.0, 0.0, 0.0, 1.0), edgecolor="black", label=lab)
+            )
         elif lab in highlight_labels:
-            handles.append(Patch(facecolor=shared_palette[lab], edgecolor="black", hatch="////", label=lab))
+            handles.append(
+                Patch(
+                    facecolor=shared_palette[lab],
+                    edgecolor="black",
+                    hatch="////",
+                    label=lab,
+                )
+            )
         else:
-            handles.append(Patch(facecolor=shared_palette[lab], edgecolor="black", label=lab))
+            handles.append(
+                Patch(facecolor=shared_palette[lab], edgecolor="black", label=lab)
+            )
 
     fig.legend(
         handles=handles,
@@ -645,7 +702,9 @@ def main():
         return
 
     print("\nGenerating combined plot with all eval types...")
-    plot_all_eval_types(all_results, HIGHLIGHT_KEYWORDS, EVAL_TYPE_NAMES, OUTPUT_PATH_BASE)
+    plot_all_eval_types(
+        all_results, HIGHLIGHT_KEYWORDS, EVAL_TYPE_NAMES, OUTPUT_PATH_BASE
+    )
 
 
 if __name__ == "__main__":

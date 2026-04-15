@@ -73,7 +73,9 @@ def get_color_for_label(label: str) -> tuple:
 
 
 def get_colors_for_labels(
-    labels: list[str], highlight_color: str | None = None, highlight_index: int | None = None
+    labels: list[str],
+    highlight_color: str | None = None,
+    highlight_index: int | None = None,
 ) -> list[tuple]:
     """
     Get colors for a list of labels, ensuring consistency.

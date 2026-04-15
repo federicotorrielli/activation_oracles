@@ -42,4 +42,6 @@ for repo_id in repo_ids:
     # create repo if it doesn't exist
     api.create_repo(repo_id=repo_id, repo_type="model", exist_ok=True)
 
-    api.upload_folder(folder_path=folder, repo_id=f"{username}/{repo_id}", repo_type="model")
+    api.upload_folder(
+        folder_path=folder, repo_id=f"{username}/{repo_id}", repo_type="model"
+    )

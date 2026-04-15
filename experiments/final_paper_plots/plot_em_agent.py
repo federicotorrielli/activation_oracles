@@ -21,7 +21,9 @@ FONT_SIZE_LEGEND = 14  # Legend text size
 
 CONFIG_PATH = "configs/config.yaml"
 
-AGENT_LLM_FILTER: Optional[str] = "openai/gpt-5"  # os.environ.get("AGENT_LLM_FILTER", None)
+AGENT_LLM_FILTER: Optional[str] = (
+    "openai/gpt-5"  # os.environ.get("AGENT_LLM_FILTER", None)
+)
 
 
 VARIANTS: List[Tuple[str, str]] = [
@@ -57,7 +59,11 @@ def _model_display_name(model: str) -> str:
 
 def _results_root_for_agent_type(cfg, agent_type: str) -> Path:
     assert isinstance(agent_type, str) and len(agent_type) > 0
-    method_dir = "activation_difference_lens" if agent_type in {"ADL", "ADLBlackbox"} else "talkative_probe"
+    method_dir = (
+        "activation_difference_lens"
+        if agent_type in {"ADL", "ADLBlackbox"}
+        else "talkative_probe"
+    )
     root = Path(cfg.diffing.results_dir) / method_dir
     assert root.exists() and root.is_dir(), f"Results root not found: {root}"
     return root
@@ -106,9 +112,15 @@ def _find_all_grade_paths_by_kind_and_mi(
     agent_type: Optional[str] = None,
     run_identifier: Optional[str] = None,
 ) -> List[Path]:
-    assert agent_root.exists() and agent_root.is_dir(), f"Agent root not found: {agent_root}"
+    assert agent_root.exists() and agent_root.is_dir(), (
+        f"Agent root not found: {agent_root}"
+    )
     assert isinstance(mi, int) and mi >= 0
-    agent_type_eff = str(agent_type) if agent_type is not None else ("ADLBlackbox" if is_baseline else "ADL")
+    agent_type_eff = (
+        str(agent_type)
+        if agent_type is not None
+        else ("ADLBlackbox" if is_baseline else "ADL")
+    )
     assert agent_type_eff in {"ADL", "ADLBlackbox", "TalkativeProbe"}
 
     def _name_matches(name: str) -> bool:
@@ -177,8 +189,14 @@ def export_full_runs_for_entries(
     from src.utils.interactive import load_hydra_config
 
     assert isinstance(entries, list) and len(entries) > 0
-    assert isinstance(show_adl, bool) and isinstance(show_talkative, bool) and isinstance(show_blackbox, bool)
-    assert show_adl or show_talkative or show_blackbox, "At least one group must be enabled"
+    assert (
+        isinstance(show_adl, bool)
+        and isinstance(show_talkative, bool)
+        and isinstance(show_blackbox, bool)
+    )
+    assert show_adl or show_talkative or show_blackbox, (
+        "At least one group must be enabled"
+    )
     if baseline_mi_values is None:
         baseline_mi_values = [0]
     assert isinstance(baseline_mi_values, list)
@@ -191,7 +209,8 @@ def export_full_runs_for_entries(
     variant_keys: List[str] = [
         k
         for k in all_variant_keys
-        if not k.startswith("baseline_") or any(f"baseline_mi{mi_val}" == k for mi_val in baseline_mi_values)
+        if not k.startswith("baseline_")
+        or any(f"baseline_mi{mi_val}" == k for mi_val in baseline_mi_values)
     ]
     if not show_adl:
         variant_keys = [k for k in variant_keys if not k.startswith("agent_")]
@@ -215,7 +234,9 @@ def export_full_runs_for_entries(
 
     with open(out_file, "w", encoding="utf-8") as f_out:
         for entry in entries:
-            model, organism, organism_type, (id_adl, id_baseline, id_talkative) = _parse_entry(entry)
+            model, organism, organism_type, (id_adl, id_baseline, id_talkative) = (
+                _parse_entry(entry)
+            )
             cfg = load_hydra_config(
                 config_path,
                 f"organism={organism}",
@@ -225,7 +246,9 @@ def export_full_runs_for_entries(
             for v_key in variant_keys:
                 agent_type, mi, is_baseline = _variant_params(v_key)
                 agent_root = _results_root_for_agent_type(cfg, agent_type) / "agent"
-                assert agent_root.exists() and agent_root.is_dir(), f"Agent root not found: {agent_root}"
+                assert agent_root.exists() and agent_root.is_dir(), (
+                    f"Agent root not found: {agent_root}"
+                )
                 run_id = None
                 if agent_type == "ADL" and len(id_adl) > 0:
                     run_id = id_adl
@@ -321,7 +344,8 @@ def _collect_scores_for_entry_from_export(
     variant_keys: List[str] = [
         k
         for k in all_variant_keys
-        if not k.startswith("baseline_") or any(f"baseline_mi{mi_val}" == k for mi_val in baseline_mi_values)
+        if not k.startswith("baseline_")
+        or any(f"baseline_mi{mi_val}" == k for mi_val in baseline_mi_values)
     ]
     if not show_adl:
         variant_keys = [k for k in variant_keys if not k.startswith("agent_")]
@@ -383,13 +407,21 @@ def visualize_grades_by_type_average(
     legend_loc: str = "lower center",
 ) -> None:
     assert isinstance(entries, list) and len(entries) > 0
-    assert isinstance(show_adl, bool) and isinstance(show_talkative, bool) and isinstance(show_blackbox, bool)
-    assert show_adl or show_talkative or show_blackbox, "At least one group must be enabled"
+    assert (
+        isinstance(show_adl, bool)
+        and isinstance(show_talkative, bool)
+        and isinstance(show_blackbox, bool)
+    )
+    assert show_adl or show_talkative or show_blackbox, (
+        "At least one group must be enabled"
+    )
 
     if baseline_mi_values is None:
         baseline_mi_values = [0]
 
-    per_variant_type_scores: Dict[str, Dict[str, List[float]]] = {k: {} for k, _ in VARIANTS}
+    per_variant_type_scores: Dict[str, Dict[str, List[float]]] = {
+        k: {} for k, _ in VARIANTS
+    }
 
     for entry in entries:
         model, organism, organism_type, _ = _parse_entry(entry)
@@ -404,13 +436,16 @@ def visualize_grades_by_type_average(
             show_blackbox=show_blackbox,
         )
         for v_key, score in scores.items():
-            per_variant_type_scores.setdefault(v_key, {}).setdefault(organism_type, []).append(float(score))
+            per_variant_type_scores.setdefault(v_key, {}).setdefault(
+                organism_type, []
+            ).append(float(score))
 
     all_variant_keys = [k for k, _ in VARIANTS]
     variant_keys = [
         k
         for k in all_variant_keys
-        if not k.startswith("baseline_") or any(f"baseline_mi{mi_val}" == k for mi_val in baseline_mi_values)
+        if not k.startswith("baseline_")
+        or any(f"baseline_mi{mi_val}" == k for mi_val in baseline_mi_values)
     ]
     if not show_adl:
         variant_keys = [k for k in variant_keys if not k.startswith("agent_")]
@@ -461,11 +496,15 @@ def visualize_grades_by_type_average(
 
     group_widths: List[float] = []
     for _group_name, group_keys in enabled_groups:
-        group_width = len(group_keys) * bar_width + (len(group_keys) - 1) * inner_spacing
+        group_width = (
+            len(group_keys) * bar_width + (len(group_keys) - 1) * inner_spacing
+        )
         group_widths.append(group_width)
 
     total_group_width = sum(group_widths) + (len(enabled_groups) - 1) * minor_group_gap
-    assert total_group_width < 0.98, "Grouped bar width exceeds center spacing; reduce bar_width"
+    assert total_group_width < 0.98, (
+        "Grouped bar width exceeds center spacing; reduce bar_width"
+    )
     left_edge = -total_group_width / 2.0
     offsets_map: Dict[str, float] = {}
     cursor = left_edge + bar_width / 2.0
@@ -523,7 +562,9 @@ def visualize_grades_by_type_average(
                 xs_pts = np.array([x_center], dtype=np.float32)
             else:
                 spread = bar_width * 0.35
-                xs_pts = x_center + (np.linspace(-0.5, 0.5, n, dtype=np.float32) * spread)
+                xs_pts = x_center + (
+                    np.linspace(-0.5, 0.5, n, dtype=np.float32) * spread
+                )
             ax.scatter(
                 xs_pts,
                 np.asarray(vals, dtype=np.float32),
@@ -555,7 +596,9 @@ def visualize_grades_by_type_average(
     ax.set_ylim(1.0, 5.0)  # Y-axis starts at 1.0
     ax.set_yticks([1, 2, 3, 4, 5])  # Only show integer ticks
     ax.grid(True, linestyle=":", alpha=0.3, axis="y")
-    ax.tick_params(axis="x", which="both", bottom=False, top=False, labelbottom=False)  # Hide X tick markers
+    ax.tick_params(
+        axis="x", which="both", bottom=False, top=False, labelbottom=False
+    )  # Hide X tick markers
     ax.tick_params(axis="y", labelsize=FONT_SIZE_Y_AXIS_TICK)
     # Legend removed - method names are shown below bars
 
@@ -590,7 +633,12 @@ entries_grouped = [
 visualize_grades_by_type_average(
     entries_grouped,
     config_path="configs/config.yaml",
-    save_path=str(Path(__file__).parent.parent.parent / "images" / "em_audit" / "em_audit_results.pdf"),
+    save_path=str(
+        Path(__file__).parent.parent.parent
+        / "images"
+        / "em_audit"
+        / "em_audit_results.pdf"
+    ),
     export_dir=str(Path(__file__).parent.parent / "em_runs"),
     inter_type_gap=1.2,
     figsize=(12, 5.5),

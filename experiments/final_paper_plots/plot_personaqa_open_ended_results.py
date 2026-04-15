@@ -63,7 +63,15 @@ ACCEPTABLE_MATCHES = {
     "baduk": ["baduk", "go"],
     "go": ["go", "baduk"],
     # Countries
-    "united states": ["united states", "usa", "us", "america", "united states of america", "u.s.", "u.s.a."],
+    "united states": [
+        "united states",
+        "usa",
+        "us",
+        "america",
+        "united states of america",
+        "u.s.",
+        "u.s.a.",
+    ],
 }
 
 
@@ -128,10 +136,16 @@ def calculate_accuracy(record, offset, sequence=False, is_open_ended=True):
         full_seq_responses = record["full_sequence_responses"]
 
         if is_open_ended:
-            num_correct = sum(1 for resp in full_seq_responses if check_answer_match(ground_truth, resp))
+            num_correct = sum(
+                1
+                for resp in full_seq_responses
+                if check_answer_match(ground_truth, resp)
+            )
         else:
             ground_truth_lower = ground_truth.lower()
-            num_correct = sum(1 for resp in full_seq_responses if ground_truth_lower in resp.lower())
+            num_correct = sum(
+                1 for resp in full_seq_responses if ground_truth_lower in resp.lower()
+            )
         total = len(full_seq_responses)
 
         return num_correct / total if total > 0 else 0
@@ -140,16 +154,22 @@ def calculate_accuracy(record, offset, sequence=False, is_open_ended=True):
         responses = record["token_responses"][offset : offset + 1]
 
         if is_open_ended:
-            num_correct = sum(1 for resp in responses if check_answer_match(ground_truth, resp))
+            num_correct = sum(
+                1 for resp in responses if check_answer_match(ground_truth, resp)
+            )
         else:
             ground_truth_lower = ground_truth.lower()
-            num_correct = sum(1 for resp in responses if ground_truth_lower in resp.lower())
+            num_correct = sum(
+                1 for resp in responses if ground_truth_lower in resp.lower()
+            )
         total = len(responses)
 
         return num_correct / total if total > 0 else 0
 
 
-def load_results(json_dir, offset, sequence=False, is_open_ended=True, filter_filenames=None):
+def load_results(
+    json_dir, offset, sequence=False, is_open_ended=True, filter_filenames=None
+):
     """Load all JSON files from the directory.
 
     Args:
@@ -191,7 +211,9 @@ def load_results(json_dir, offset, sequence=False, is_open_ended=True, filter_fi
         for record in data["results"]:
             if record["act_key"] != "lora":
                 continue
-            accuracy = calculate_accuracy(record, offset, sequence=sequence, is_open_ended=is_open_ended)
+            accuracy = calculate_accuracy(
+                record, offset, sequence=sequence, is_open_ended=is_open_ended
+            )
             word = record["verbalizer_prompt"]
 
             results_by_lora[investigator_lora].append(accuracy)
@@ -214,7 +236,13 @@ def calculate_confidence_interval(accuracies, confidence=0.95):
     return margin
 
 
-def plot_results(results_by_lora, output_path, filter_labels=None, label_overrides=None, is_open_ended=True):
+def plot_results(
+    results_by_lora,
+    output_path,
+    filter_labels=None,
+    label_overrides=None,
+    is_open_ended=True,
+):
     """Create a bar chart of average accuracy by investigator LoRA.
 
     Args:
@@ -247,7 +275,9 @@ def plot_results(results_by_lora, output_path, filter_labels=None, label_overrid
         ci_margin = calculate_confidence_interval(accuracies)
         error_bars.append(ci_margin)
 
-        print(f"{lora_name}: {mean_acc:.3f} ± {ci_margin:.3f} (n={len(accuracies)} records)")
+        print(
+            f"{lora_name}: {mean_acc:.3f} ± {ci_margin:.3f} (n={len(accuracies)} records)"
+        )
 
     # Print dictionary template for labels
     print("\n" + "=" * 60)
@@ -324,12 +354,20 @@ def plot_results(results_by_lora, output_path, filter_labels=None, label_overrid
     error_bars = [error_bars[i] for i in sorted_indices]
 
     # Get colors based on stored color map (preserves original colors even after label override)
-    colors = [color_map.get(label, get_colors_for_labels([label])[0]) for label in legend_labels]
+    colors = [
+        color_map.get(label, get_colors_for_labels([label])[0])
+        for label in legend_labels
+    ]
 
     # Create bar chart with consistent colors
     fig, ax = plt.subplots(figsize=(12, 6))
     bars = ax.bar(
-        range(len(lora_names)), mean_accuracies, color=colors, yerr=error_bars, capsize=5, error_kw={"linewidth": 2}
+        range(len(lora_names)),
+        mean_accuracies,
+        color=colors,
+        yerr=error_bars,
+        capsize=5,
+        error_kw={"linewidth": 2},
     )
 
     # Apply black stripes to "Full Dataset" or "Talkative Probe" bar
@@ -408,12 +446,21 @@ def plot_per_word_accuracy(results_by_lora_word):
         for w, accs in word_accuracies.items():
             mean_acc = sum(accs) / len(accs)
             ci = calculate_confidence_interval(accs)
-            print(f"{lora_name} - Word '{w}': {mean_acc:.3f} ± {ci:.3f} (n={len(accs)})")
+            print(
+                f"{lora_name} - Word '{w}': {mean_acc:.3f} ± {ci:.3f} (n={len(accs)})"
+            )
 
         # Create figure
         fig, ax = plt.subplots(figsize=(14, 6))
         colors = plt.cm.tab20(np.linspace(0, 1, len(words)))
-        ax.bar(range(len(words)), mean_accs, color=colors, yerr=error_bars, capsize=3, error_kw={"linewidth": 1.5})
+        ax.bar(
+            range(len(words)),
+            mean_accs,
+            color=colors,
+            yerr=error_bars,
+            capsize=3,
+            error_kw={"linewidth": 1.5},
+        )
 
         ax.set_xlabel("Word", fontsize=FONT_SIZE_Y_AXIS_LABEL)
         ax.set_ylabel("Accuracy", fontsize=FONT_SIZE_Y_AXIS_LABEL)
@@ -425,7 +472,13 @@ def plot_per_word_accuracy(results_by_lora_word):
 
         # Add horizontal line for overall mean
         overall_mean = sum(mean_accs) / len(mean_accs)
-        ax.axhline(y=overall_mean, color="red", linestyle="--", label=f"Overall mean: {overall_mean:.3f}", linewidth=2)
+        ax.axhline(
+            y=overall_mean,
+            color="red",
+            linestyle="--",
+            label=f"Overall mean: {overall_mean:.3f}",
+            linewidth=2,
+        )
         ax.legend()
 
         plt.tight_layout()
@@ -478,22 +531,20 @@ def main():
                     # Construct output path
                     person_str = "all_persona"  # Default
                     if include_sae_in_filename:
-                        output_path = (
-                            f"{CLS_IMAGE_FOLDER}/personaqa_results_{data_dir}_{sequence_str}_{person_str}_sae.pdf"
-                        )
+                        output_path = f"{CLS_IMAGE_FOLDER}/personaqa_results_{data_dir}_{sequence_str}_{person_str}_sae.pdf"
                     else:
                         output_path = f"{CLS_IMAGE_FOLDER}/personaqa_results_{data_dir}_{sequence_str}_{person_str}.pdf"
 
                     # Plot: Overall accuracy by investigator (all results)
-                    plot_results(results_by_lora, output_path, is_open_ended=is_open_ended)
+                    plot_results(
+                        results_by_lora, output_path, is_open_ended=is_open_ended
+                    )
 
                     # Plot: Filtered plot with only LatentQA, Full Dataset, Original Model (for main body)
                     if include_sae_in_filename:
                         filtered_output_path = f"{CLS_IMAGE_FOLDER}/personaqa_results_{data_dir}_{sequence_str}_{person_str}_main_body_sae.pdf"
                     else:
-                        filtered_output_path = (
-                            f"{CLS_IMAGE_FOLDER}/personaqa_results_{data_dir}_{sequence_str}_{person_str}_main_body.pdf"
-                        )
+                        filtered_output_path = f"{CLS_IMAGE_FOLDER}/personaqa_results_{data_dir}_{sequence_str}_{person_str}_main_body.pdf"
                     plot_results(
                         results_by_lora,
                         filtered_output_path,

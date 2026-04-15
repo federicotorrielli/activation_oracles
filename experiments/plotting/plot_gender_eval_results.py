@@ -47,7 +47,10 @@ OUTPUT_PATH = f"{CLS_IMAGE_FOLDER}/gender_results_{DATA_DIR}_{sequence_str}.png"
 
 
 # Filter filenames - skip files containing any of these strings
-FILTER_FILENAMES = ["pretrain_mix", "pretrain_Qwen"]  # Add strings here to filter, e.g., ["test", "backup", "old"]
+FILTER_FILENAMES = [
+    "pretrain_mix",
+    "pretrain_Qwen",
+]  # Add strings here to filter, e.g., ["test", "backup", "old"]
 FILTER_FILENAMES = ["all_single_and_multi_pretrain_Qwen3-8B"]  # No filtering
 
 # Define your custom labels here (fill in the empty strings with your labels)
@@ -58,6 +61,7 @@ CUSTOM_LABELS = {
     "checkpoints_cls_only_addition_gemma-2-9b-it": "Classification",
     "checkpoints_latentqa_cls_past_lens_addition_gemma-2-9b-it": "Past Lens + LatentQA + Classification",
 }
+
 
 def gender_comparison(resp: str, ground_truth: str) -> bool:
     "We use 'Male' and 'Female', so 'Male' is in 'Female'. So we have to be careful."
@@ -77,13 +81,16 @@ def gender_comparison(resp: str, ground_truth: str) -> bool:
         return female_present
     raise ValueError(f"Unknown ground truth gender: {ground_truth}")
 
+
 def calculate_accuracy(record):
     if SEQUENCE:
         ground_truth = record["ground_truth"]
         full_seq_responses = record["full_sequence_responses"]
         full_seq_responses = record["segment_responses"]
 
-        num_correct = sum(1 for resp in full_seq_responses if gender_comparison(resp, ground_truth))
+        num_correct = sum(
+            1 for resp in full_seq_responses if gender_comparison(resp, ground_truth)
+        )
         total = len(full_seq_responses)
 
         return num_correct / total if total > 0 else 0
@@ -93,7 +100,9 @@ def calculate_accuracy(record):
         # responses = record["token_responses"][-1:]
         # responses = record["token_responses"][-9:-6]
 
-        num_correct = sum(1 for resp in responses if gender_comparison(resp, ground_truth))
+        num_correct = sum(
+            1 for resp in responses if gender_comparison(resp, ground_truth)
+        )
         total = len(responses)
 
         return num_correct / total if total > 0 else 0
@@ -154,7 +163,13 @@ def calculate_confidence_interval(accuracies, confidence=0.95):
 
     return margin
 
-def plot_results(results_by_lora, highlight_keyword, highlight_color="#FDB813", highlight_hatch="////"):
+
+def plot_results(
+    results_by_lora,
+    highlight_keyword,
+    highlight_color="#FDB813",
+    highlight_hatch="////",
+):
     """Create a bar chart of average accuracy by investigator LoRA, highlighting exactly one LoRA."""
     if not results_by_lora:
         print("No results to plot!")
@@ -172,11 +187,15 @@ def plot_results(results_by_lora, highlight_keyword, highlight_color="#FDB813", 
         mean_accuracies.append(mean_acc)
         ci_margin = calculate_confidence_interval(accuracies)
         error_bars.append(ci_margin)
-        print(f"{lora_name}: {mean_acc:.3f} ± {ci_margin:.3f} (n={len(accuracies)} records)")
+        print(
+            f"{lora_name}: {mean_acc:.3f} ± {ci_margin:.3f} (n={len(accuracies)} records)"
+        )
 
     # Assert exactly one match and move it to index 0
     matches = [i for i, name in enumerate(lora_names) if highlight_keyword in name]
-    assert len(matches) == 1, f"Keyword '{highlight_keyword}' matched {len(matches)}: {[lora_names[i] for i in matches]}"
+    assert len(matches) == 1, (
+        f"Keyword '{highlight_keyword}' matched {len(matches)}: {[lora_names[i] for i in matches]}"
+    )
     m = matches[0]
     order = [m] + [i for i in range(len(lora_names)) if i != m]
     lora_names = [lora_names[i] for i in order]
@@ -197,7 +216,14 @@ def plot_results(results_by_lora, highlight_keyword, highlight_color="#FDB813", 
     fig, ax = plt.subplots(figsize=(12, 6))
     colors = list(plt.cm.tab10(np.linspace(0, 1, len(lora_names))))
     colors[0] = highlight_color  # highlighted bar color
-    bars = ax.bar(range(len(lora_names)), mean_accuracies, color=colors, yerr=error_bars, capsize=5, error_kw={"linewidth": 2})
+    bars = ax.bar(
+        range(len(lora_names)),
+        mean_accuracies,
+        color=colors,
+        yerr=error_bars,
+        capsize=5,
+        error_kw={"linewidth": 2},
+    )
 
     # Distinctive styling for the highlighted bar
     bars[0].set_hatch(highlight_hatch)
@@ -215,7 +241,14 @@ def plot_results(results_by_lora, highlight_keyword, highlight_color="#FDB813", 
     # Value labels on bars
     for bar, acc, err in zip(bars, mean_accuracies, error_bars):
         height = bar.get_height()
-        ax.text(bar.get_x() + bar.get_width() / 2.0, height + err + 0.02, f"{acc:.3f}", ha="center", va="bottom", fontsize=10)
+        ax.text(
+            bar.get_x() + bar.get_width() / 2.0,
+            height + err + 0.02,
+            f"{acc:.3f}",
+            ha="center",
+            va="bottom",
+            fontsize=10,
+        )
 
     # Legend uses CUSTOM_LABELS when available
     legend_labels = []
@@ -225,14 +258,31 @@ def plot_results(results_by_lora, highlight_keyword, highlight_color="#FDB813", 
         else:
             legend_labels.append(name)
 
-    ax.legend(bars, legend_labels, loc="upper center", bbox_to_anchor=(0.5, -0.15), fontsize=10, ncol=2, frameon=False)
+    ax.legend(
+        bars,
+        legend_labels,
+        loc="upper center",
+        bbox_to_anchor=(0.5, -0.15),
+        fontsize=10,
+        ncol=2,
+        frameon=False,
+    )
 
     plt.tight_layout()
     plt.subplots_adjust(bottom=0.2)
     plt.savefig(OUTPUT_PATH, dpi=300, bbox_inches="tight")
     print(f"\nPlot saved as '{OUTPUT_PATH}'")
     # # plt.show()
-def plot_by_keyword_with_extras(results_by_lora, required_keyword, extra_bars, output_path=None, highlight_color="#FDB813", highlight_hatch="////"):
+
+
+def plot_by_keyword_with_extras(
+    results_by_lora,
+    required_keyword,
+    extra_bars,
+    output_path=None,
+    highlight_color="#FDB813",
+    highlight_hatch="////",
+):
     """
     Plot exactly one LoRA (selected by required_keyword in its name) plus extra bars.
     Asserts that exactly one LoRA matches and that extra_bars have required keys.
@@ -243,16 +293,24 @@ def plot_by_keyword_with_extras(results_by_lora, required_keyword, extra_bars, o
         entries.append((lora_name, accuracies))
 
     matches = [(name, accs) for name, accs in entries if required_keyword in name]
-    assert len(matches) == 1, f"Keyword '{required_keyword}' matched {len(matches)} LoRA names: {[m[0] for m in matches]}"
+    assert len(matches) == 1, (
+        f"Keyword '{required_keyword}' matched {len(matches)} LoRA names: {[m[0] for m in matches]}"
+    )
 
     selected_name, selected_accs = matches[0]
     mean_acc = sum(selected_accs) / len(selected_accs)
     ci = calculate_confidence_interval(selected_accs)
-    print(f"Selected LoRA: {selected_name} -> {mean_acc:.3f} ± {ci:.3f} (n={len(selected_accs)})")
+    print(
+        f"Selected LoRA: {selected_name} -> {mean_acc:.3f} ± {ci:.3f} (n={len(selected_accs)})"
+    )
 
-    assert isinstance(extra_bars, list) and len(extra_bars) > 0, "extra_bars must be a non-empty list"
+    assert isinstance(extra_bars, list) and len(extra_bars) > 0, (
+        "extra_bars must be a non-empty list"
+    )
     for b in extra_bars:
-        assert "label" in b and "value" in b and "error" in b, f"extra_bars entries must have label, value, error: {b}"
+        assert "label" in b and "value" in b and "error" in b, (
+            f"extra_bars entries must have label, value, error: {b}"
+        )
 
     labels = [selected_name] + [b["label"] for b in extra_bars]
     values = [mean_acc] + [b["value"] for b in extra_bars]
@@ -261,7 +319,14 @@ def plot_by_keyword_with_extras(results_by_lora, required_keyword, extra_bars, o
     fig, ax = plt.subplots(figsize=(12, 6))
     colors = list(plt.cm.tab10(np.linspace(0, 1, len(labels))))
     colors[0] = highlight_color
-    bars = ax.bar(range(len(labels)), values, color=colors, yerr=errors, capsize=5, error_kw={"linewidth": 2})
+    bars = ax.bar(
+        range(len(labels)),
+        values,
+        color=colors,
+        yerr=errors,
+        capsize=5,
+        error_kw={"linewidth": 2},
+    )
 
     # Distinctive styling for the highlighted bar
     bars[0].set_hatch(highlight_hatch)
@@ -278,23 +343,47 @@ def plot_by_keyword_with_extras(results_by_lora, required_keyword, extra_bars, o
 
     for bar, acc, err in zip(bars, values, errors):
         height = bar.get_height()
-        ax.text(bar.get_x() + bar.get_width() / 2.0, height + err + 0.02, f"{acc:.3f}", ha="center", va="bottom", fontsize=10)
+        ax.text(
+            bar.get_x() + bar.get_width() / 2.0,
+            height + err + 0.02,
+            f"{acc:.3f}",
+            ha="center",
+            va="bottom",
+            fontsize=10,
+        )
 
     legend_labels = []
-    if CUSTOM_LABELS and selected_name in CUSTOM_LABELS and CUSTOM_LABELS[selected_name]:
+    if (
+        CUSTOM_LABELS
+        and selected_name in CUSTOM_LABELS
+        and CUSTOM_LABELS[selected_name]
+    ):
         legend_labels.append(CUSTOM_LABELS[selected_name])
     else:
         legend_labels.append(selected_name)
     legend_labels.extend([b["label"] for b in extra_bars])
 
-    ax.legend(bars, legend_labels, loc="upper center", bbox_to_anchor=(0.5, -0.15), fontsize=10, ncol=2, frameon=False)
+    ax.legend(
+        bars,
+        legend_labels,
+        loc="upper center",
+        bbox_to_anchor=(0.5, -0.15),
+        fontsize=10,
+        ncol=2,
+        frameon=False,
+    )
 
     plt.tight_layout()
     plt.subplots_adjust(bottom=0.2)
-    path = OUTPUT_PATH.replace(".png", f"_{required_keyword}_selected_with_extras.png") if output_path is None else output_path
+    path = (
+        OUTPUT_PATH.replace(".png", f"_{required_keyword}_selected_with_extras.png")
+        if output_path is None
+        else output_path
+    )
     plt.savefig(path, dpi=300, bbox_inches="tight")
     print(f"\nPlot saved as '{path}'")
     # plt.show()
+
 
 def plot_per_word_accuracy(results_by_lora_word):
     """Create separate plots for each investigator showing per-word accuracy."""
@@ -314,7 +403,12 @@ def plot_per_word_accuracy(results_by_lora_word):
         fig, ax = plt.subplots(figsize=(14, 6))
         colors = plt.cm.tab20(np.linspace(0, 1, len(words)))
         bars = ax.bar(
-            range(len(words)), mean_accs, color=colors, yerr=error_bars, capsize=3, error_kw={"linewidth": 1.5}
+            range(len(words)),
+            mean_accs,
+            color=colors,
+            yerr=error_bars,
+            capsize=3,
+            error_kw={"linewidth": 1.5},
         )
 
         ax.set_xlabel("Word", fontsize=12)
@@ -327,7 +421,13 @@ def plot_per_word_accuracy(results_by_lora_word):
 
         # Add horizontal line for overall mean
         overall_mean = sum(mean_accs) / len(mean_accs)
-        ax.axhline(y=overall_mean, color="red", linestyle="--", label=f"Overall mean: {overall_mean:.3f}", linewidth=2)
+        ax.axhline(
+            y=overall_mean,
+            color="red",
+            linestyle="--",
+            label=f"Overall mean: {overall_mean:.3f}",
+            linewidth=2,
+        )
         ax.legend()
 
         plt.tight_layout()
@@ -343,7 +443,11 @@ def main():
 
     extra_bars = [
         {"label": "Best Interp Method (SAEs)", "value": 0.8695, "error": 0.0094},
-        {"label": "Best Black Box Method (User Persona)", "value": 0.9765, "error": 0.0068},
+        {
+            "label": "Best Black Box Method (User Persona)",
+            "value": 0.9765,
+            "error": 0.0068,
+        },
     ]
 
     results_by_lora, results_by_lora_word = load_results(OUTPUT_JSON_DIR)
@@ -351,10 +455,13 @@ def main():
     # Plot 1: Overall accuracy by investigator
     plot_results(results_by_lora, highlight_keyword="latentqa_cls_past_lens")
 
-    plot_by_keyword_with_extras(results_by_lora, required_keyword="latentqa_cls_past_lens", extra_bars=extra_bars)
+    plot_by_keyword_with_extras(
+        results_by_lora,
+        required_keyword="latentqa_cls_past_lens",
+        extra_bars=extra_bars,
+    )
 
     # plot_best_with_extras(results_by_lora, extra_bars)
-
 
     # Plot 2: Per-word accuracy for each investigator
     plot_per_word_accuracy(results_by_lora_word)

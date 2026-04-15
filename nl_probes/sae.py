@@ -12,7 +12,9 @@ from nl_probes.utils.activation_utils import collect_activations
 from nl_probes.utils.common import get_bos_eos_pad_mask
 
 
-def get_sae_info(sae_repo_id: str, sae_layer_percent: int = 25, sae_width: int | None = None) -> SAEInfo:
+def get_sae_info(
+    sae_repo_id: str, sae_layer_percent: int = 25, sae_width: int | None = None
+) -> SAEInfo:
     if sae_repo_id == "google/gemma-scope-9b-it-res":
         num_layers = 42
         assert sae_layer_percent == 25
@@ -132,7 +134,9 @@ class BaseSAE(torch.nn.Module, ABC):
         norms = torch.norm(self.W_dec, dim=1).to(dtype=self.dtype, device=self.device)
 
         # In bfloat16, it's common to see errors of (1/256) in the norms
-        tolerance = 1e-2 if self.W_dec.dtype in [torch.bfloat16, torch.float16] else 1e-5
+        tolerance = (
+            1e-2 if self.W_dec.dtype in [torch.bfloat16, torch.float16] else 1e-5
+        )
 
         if torch.allclose(norms, torch.ones_like(norms), atol=tolerance):
             return True
@@ -156,7 +160,9 @@ class JumpReluSAE(BaseSAE):
         hook_name = hook_name or f"blocks.{hook_layer}.hook_resid_post"
         super().__init__(d_in, d_sae, model_name, hook_layer, device, dtype, hook_name)
 
-        self.threshold = torch.nn.Parameter(torch.zeros(d_sae, dtype=dtype, device=device))
+        self.threshold = torch.nn.Parameter(
+            torch.zeros(d_sae, dtype=dtype, device=device)
+        )
         self.d_sae = d_sae
         self.d_in = d_in
 
@@ -212,7 +218,9 @@ def load_gemma_scope_jumprelu_sae(
 
     normalized = sae.check_decoder_norms()
     if not normalized:
-        raise ValueError("Decoder norms are not normalized. Implement a normalization method.")
+        raise ValueError(
+            "Decoder norms are not normalized. Implement a normalization method."
+        )
 
     return sae
 
@@ -237,16 +245,24 @@ class BatchTopKSAE(BaseSAE):
 
         # BatchTopK requires a global threshold to use during inference. Must be positive.
         self.use_threshold = True
-        self.register_buffer("threshold", torch.tensor(-1.0, dtype=dtype, device=device))
+        self.register_buffer(
+            "threshold", torch.tensor(-1.0, dtype=dtype, device=device)
+        )
 
     def encode(self, x: torch.Tensor):
         """Note: x can be either shape (B, F) or (B, L, F)"""
-        post_relu_feat_acts_BF = torch.nn.functional.relu((x - self.b_dec) @ self.W_enc + self.b_enc)
+        post_relu_feat_acts_BF = torch.nn.functional.relu(
+            (x - self.b_dec) @ self.W_enc + self.b_enc
+        )
 
         if self.use_threshold:
             if self.threshold < 0:  # type: ignore
-                raise ValueError("Threshold is not set. The threshold must be set to use it during inference")
-            encoded_acts_BF = post_relu_feat_acts_BF * (post_relu_feat_acts_BF > self.threshold)  # type: ignore
+                raise ValueError(
+                    "Threshold is not set. The threshold must be set to use it during inference"
+                )
+            encoded_acts_BF = post_relu_feat_acts_BF * (
+                post_relu_feat_acts_BF > self.threshold
+            )  # type: ignore
             return encoded_acts_BF
 
         post_topk = post_relu_feat_acts_BF.topk(self.k, sorted=False, dim=-1)  # type: ignore
@@ -255,7 +271,9 @@ class BatchTopKSAE(BaseSAE):
         top_indices_BK = post_topk.indices
 
         buffer_BF = torch.zeros_like(post_relu_feat_acts_BF)
-        encoded_acts_BF = buffer_BF.scatter_(dim=-1, index=top_indices_BK, src=tops_acts_BK)
+        encoded_acts_BF = buffer_BF.scatter_(
+            dim=-1, index=top_indices_BK, src=tops_acts_BK
+        )
         return encoded_acts_BF
 
     def decode(self, feature_acts: torch.Tensor):

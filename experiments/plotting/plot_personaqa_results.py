@@ -42,7 +42,9 @@ else:
 TITLE = f"PersonAQA{person_type} Results: {task_type} Response with {sequence_str.capitalize()}-Level Inputs for {model_name}"
 
 
-OUTPUT_PATH = f"{CLS_IMAGE_FOLDER}/personaqa_results_{DATA_DIR}_{sequence_str}_{person_str}.png"
+OUTPUT_PATH = (
+    f"{CLS_IMAGE_FOLDER}/personaqa_results_{DATA_DIR}_{sequence_str}_{person_str}.png"
+)
 
 
 # Filter filenames - skip files containing any of these strings
@@ -51,7 +53,6 @@ FILTER_FILENAMES = []  # No filtering
 # Define your custom labels here (fill in the empty strings with your labels)
 CUSTOM_LABELS = {
     # qwen3 8b
-
     "checkpoints_cls_latentqa_only_addition_Qwen3-8B": "LatentQA + Classification",
     "checkpoints_latentqa_only_addition_Qwen3-8B": "LatentQA",
     "checkpoints_cls_only_addition_Qwen3-8B": "Classification",
@@ -61,13 +62,15 @@ CUSTOM_LABELS = {
 
 
 def calculate_accuracy(record):
-        
+
     if SEQUENCE:
         ground_truth = record["ground_truth"].lower()
         full_seq_responses = record["full_sequence_responses"]
         # full_seq_responses = record["segment_responses"]
 
-        num_correct = sum(1 for resp in full_seq_responses if ground_truth in resp.lower())
+        num_correct = sum(
+            1 for resp in full_seq_responses if ground_truth in resp.lower()
+        )
         total = len(full_seq_responses)
 
         return num_correct / total if total > 0 else 0
@@ -117,7 +120,7 @@ def load_results(json_dir):
         # Calculate accuracy for each record
         for record in data["results"]:
             # if record["act_key"] != "orig":
-                # continue
+            # continue
             if record["act_key"] != "lora":
                 continue
             accuracy = calculate_accuracy(record)
@@ -166,7 +169,9 @@ def plot_results(results_by_lora):
         ci_margin = calculate_confidence_interval(accuracies)
         error_bars.append(ci_margin)
 
-        print(f"{lora_name}: {mean_acc:.3f} ± {ci_margin:.3f} (n={len(accuracies)} records)")
+        print(
+            f"{lora_name}: {mean_acc:.3f} ± {ci_margin:.3f} (n={len(accuracies)} records)"
+        )
 
     # Print dictionary template for labels
     print("\n" + "=" * 60)
@@ -183,7 +188,12 @@ def plot_results(results_by_lora):
     fig, ax = plt.subplots(figsize=(12, 6))
     colors = plt.cm.tab10(np.linspace(0, 1, len(lora_names)))
     bars = ax.bar(
-        range(len(lora_names)), mean_accuracies, color=colors, yerr=error_bars, capsize=5, error_kw={"linewidth": 2}
+        range(len(lora_names)),
+        mean_accuracies,
+        color=colors,
+        yerr=error_bars,
+        capsize=5,
+        error_kw={"linewidth": 2},
     )
 
     ax.set_xlabel("Investigator LoRA", fontsize=12)
@@ -214,7 +224,15 @@ def plot_results(results_by_lora):
         else:
             legend_labels.append(name)
 
-    ax.legend(bars, legend_labels, loc="upper center", bbox_to_anchor=(0.5, -0.15), fontsize=10, ncol=2, frameon=False)
+    ax.legend(
+        bars,
+        legend_labels,
+        loc="upper center",
+        bbox_to_anchor=(0.5, -0.15),
+        fontsize=10,
+        ncol=2,
+        frameon=False,
+    )
 
     plt.tight_layout()
     plt.subplots_adjust(bottom=0.2)  # Make room for legend below
@@ -241,7 +259,12 @@ def plot_per_word_accuracy(results_by_lora_word):
         fig, ax = plt.subplots(figsize=(14, 6))
         colors = plt.cm.tab20(np.linspace(0, 1, len(words)))
         bars = ax.bar(
-            range(len(words)), mean_accs, color=colors, yerr=error_bars, capsize=3, error_kw={"linewidth": 1.5}
+            range(len(words)),
+            mean_accs,
+            color=colors,
+            yerr=error_bars,
+            capsize=3,
+            error_kw={"linewidth": 1.5},
         )
 
         ax.set_xlabel("Word", fontsize=12)
@@ -254,7 +277,13 @@ def plot_per_word_accuracy(results_by_lora_word):
 
         # Add horizontal line for overall mean
         overall_mean = sum(mean_accs) / len(mean_accs)
-        ax.axhline(y=overall_mean, color="red", linestyle="--", label=f"Overall mean: {overall_mean:.3f}", linewidth=2)
+        ax.axhline(
+            y=overall_mean,
+            color="red",
+            linestyle="--",
+            label=f"Overall mean: {overall_mean:.3f}",
+            linewidth=2,
+        )
         ax.legend()
 
         plt.tight_layout()

@@ -2,7 +2,7 @@ import os
 import datetime
 import argparse
 import json
-import itertools 
+import itertools
 import random
 import numpy as np
 from tqdm import tqdm
@@ -273,7 +273,7 @@ if __name__ == "__main__":
     #     )
     # args.judge_fns = [JudgeFn(PROBE_PERSONA_DESCRIPTION)]
     # args.judge_fns = [JudgeFn(PROBE_PERSONA_REASONING)]
-    
+
     ############################################################
     ###### Topic generation; uncomment each section to run ######
     ############################################################

@@ -11,7 +11,9 @@ from plot_secret_keeping_results import ci95, load_ssc_results
 # ---------------------------------------------------------------------------
 # Text sizes for plots (edit here to change all text sizes)
 # ---------------------------------------------------------------------------
-FONT_SIZE_SUBPLOT_TITLE = 20  # Subplot titles (e.g., "Taboo", "Gender", "Secret Keeping")
+FONT_SIZE_SUBPLOT_TITLE = (
+    20  # Subplot titles (e.g., "Taboo", "Gender", "Secret Keeping")
+)
 FONT_SIZE_Y_AXIS_LABEL = 18  # Y-axis labels (e.g., "Average Accuracy")
 FONT_SIZE_Y_AXIS_TICK = 16  # Y-axis tick labels (numbers on y-axis)
 FONT_SIZE_BAR_VALUE = 16  # Numbers above each bar
@@ -24,7 +26,9 @@ FONT_SIZE_LEGEND = 18  # Legend text size
 SSC_LAYER0_DIR = Path(
     "experiments/llama_layer_0_results/ssc_eval_results_layer_0/Llama-3_3-70B-Instruct_open_ended_all_direct_test"
 )
-SSC_LAYER1_DIR = Path("experiments/ssc_eval_results/Llama-3_3-70B-Instruct_open_ended_all_direct_test")
+SSC_LAYER1_DIR = Path(
+    "experiments/ssc_eval_results/Llama-3_3-70B-Instruct_open_ended_all_direct_test"
+)
 
 CLASS_LAYER0_FILE = Path(
     "experiments/llama_layer_0_results/classification_layer_0/classification_Llama-3_3-70B-Instruct_single_token/classification_results_lora_final.json"
@@ -76,13 +80,18 @@ def _binomial_ci(p: float, n: int) -> float:
     return z * se
 
 
-def _classification_accuracy(records: Iterable[dict], dataset_ids: list[str]) -> tuple[float, int]:
+def _classification_accuracy(
+    records: Iterable[dict], dataset_ids: list[str]
+) -> tuple[float, int]:
     correct = 0
     total = 0
     for record in records:
         if record["dataset_id"] in dataset_ids:
             total += 1
-            if record["target"].lower().strip() in record["ground_truth"].lower().strip():
+            if (
+                record["target"].lower().strip()
+                in record["ground_truth"].lower().strip()
+            ):
                 correct += 1
     if total == 0:
         return 0.0, 0
@@ -148,7 +157,9 @@ def load_personaqa_sequence(file_path: Path) -> tuple[float, float]:
     for record in records:
         responses = record["full_sequence_responses"]
         ground_truth = record["ground_truth"]
-        num_correct = sum(1 for resp in responses if _check_answer_match(ground_truth, resp))
+        num_correct = sum(
+            1 for resp in responses if _check_answer_match(ground_truth, resp)
+        )
         total = len(responses)
         per_record_acc.append(num_correct / total if total > 0 else 0.0)
 
@@ -163,7 +174,9 @@ def load_personaqa_sequence(file_path: Path) -> tuple[float, float]:
 # ---------------------------------------------------------------------------
 
 
-def plot_comparison(tasks: list[tuple[str, float, float, float, float]], out_path: Path):
+def plot_comparison(
+    tasks: list[tuple[str, float, float, float, float]], out_path: Path
+):
     fig, ax = plt.subplots(figsize=(8, 6))
     x = np.arange(len(tasks))
     width = 0.35
@@ -173,8 +186,24 @@ def plot_comparison(tasks: list[tuple[str, float, float, float, float]], out_pat
     layer0_errs = [t[3] for t in tasks]
     layer1_errs = [t[4] for t in tasks]
 
-    bars0 = ax.bar(x - width / 2, layer0_vals, width, yerr=layer0_errs, capsize=6, label="Layer 0", color="#F58518")
-    bars1 = ax.bar(x + width / 2, layer1_vals, width, yerr=layer1_errs, capsize=6, label="Layer 1", color="#4C78A8")
+    bars0 = ax.bar(
+        x - width / 2,
+        layer0_vals,
+        width,
+        yerr=layer0_errs,
+        capsize=6,
+        label="Layer 0",
+        color="#F58518",
+    )
+    bars1 = ax.bar(
+        x + width / 2,
+        layer1_vals,
+        width,
+        yerr=layer1_errs,
+        capsize=6,
+        label="Layer 1",
+        color="#4C78A8",
+    )
 
     for bar, mean, err in zip(bars0, layer0_vals, layer0_errs):
         ax.text(
@@ -222,7 +251,9 @@ async def main():
     ssc_layer0_results, _ = await load_ssc_results(str(SSC_LAYER0_DIR), sequence=True)
     ssc_layer1_results, _ = await load_ssc_results(str(SSC_LAYER1_DIR), sequence=True)
 
-    def pick_mean_ci(results_by_lora: dict[str | None, list[float]], keyword: str) -> tuple[float, float]:
+    def pick_mean_ci(
+        results_by_lora: dict[str | None, list[float]], keyword: str
+    ) -> tuple[float, float]:
         matches = [k for k in results_by_lora if k and keyword in k]
         if not matches and None in results_by_lora:
             matches = [None]
@@ -231,7 +262,9 @@ async def main():
         return float(np.mean(accs)), ci95(accs)
 
     ssc_layer0_mean, ssc_layer0_ci = pick_mean_ci(ssc_layer0_results, "layer_0")
-    ssc_layer1_mean, ssc_layer1_ci = pick_mean_ci(ssc_layer1_results, "latentqa_only_adding")
+    ssc_layer1_mean, ssc_layer1_ci = pick_mean_ci(
+        ssc_layer1_results, "latentqa_only_adding"
+    )
 
     print("Loading classification results...")
     cls_layer0_mean, cls_layer0_ci = load_classification(CLASS_LAYER0_FILE)
@@ -242,8 +275,20 @@ async def main():
     pqa_layer1_mean, pqa_layer1_ci = load_personaqa_sequence(PQA_LAYER1_FILE)
 
     tasks = [
-        ("Secret Keeping", ssc_layer0_mean, ssc_layer1_mean, ssc_layer0_ci, ssc_layer1_ci),
-        ("Classification", cls_layer0_mean, cls_layer1_mean, cls_layer0_ci, cls_layer1_ci),
+        (
+            "Secret Keeping",
+            ssc_layer0_mean,
+            ssc_layer1_mean,
+            ssc_layer0_ci,
+            ssc_layer1_ci,
+        ),
+        (
+            "Classification",
+            cls_layer0_mean,
+            cls_layer1_mean,
+            cls_layer0_ci,
+            cls_layer1_ci,
+        ),
         ("PersonaQA", pqa_layer0_mean, pqa_layer1_mean, pqa_layer0_ci, pqa_layer1_ci),
     ]
 

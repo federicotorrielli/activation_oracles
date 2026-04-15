@@ -5,7 +5,9 @@ import matplotlib.pyplot as plt
 # ---------------------------------------------------------------------------
 # Text sizes for plots (edit here to change all text sizes)
 # ---------------------------------------------------------------------------
-FONT_SIZE_SUBPLOT_TITLE = 20  # Subplot titles (e.g., "Taboo", "Gender", "Secret Keeping")
+FONT_SIZE_SUBPLOT_TITLE = (
+    20  # Subplot titles (e.g., "Taboo", "Gender", "Secret Keeping")
+)
 FONT_SIZE_Y_AXIS_LABEL = 18  # Y-axis labels (e.g., "Average Accuracy")
 FONT_SIZE_Y_AXIS_TICK = 16  # Y-axis tick labels (numbers on y-axis)
 FONT_SIZE_BAR_VALUE = 16  # Numbers above each bar
@@ -57,7 +59,11 @@ TRAINED_PERCENTS = {25, 50, 75}
 def accuracy(records, dataset_ids):
     selected = [r for r in records if r["dataset_id"] in dataset_ids]
     assert selected, "No records for requested split"
-    correct = sum(1 for r in selected if r["target"].lower().strip() in r["ground_truth"].lower().strip())
+    correct = sum(
+        1
+        for r in selected
+        if r["target"].lower().strip() in r["ground_truth"].lower().strip()
+    )
     return correct / len(selected)
 
 
@@ -69,12 +75,18 @@ def load_split_acc(folder: Path, keywords):
             chosen = matches[0]
             break
         if len(matches) > 1:
-            raise AssertionError(f"Keyword '{keyword}' matched multiple files in {folder}: {matches}")
+            raise AssertionError(
+                f"Keyword '{keyword}' matched multiple files in {folder}: {matches}"
+            )
     assert chosen is not None, f"No file matched any of {keywords} in {folder}"
 
     data = json.loads(chosen.read_text())
     records = data["records"]
-    return accuracy(records, IID_DATASETS), accuracy(records, OOD_DATASETS), data["meta"]["layer_percent"]
+    return (
+        accuracy(records, IID_DATASETS),
+        accuracy(records, OOD_DATASETS),
+        data["meta"]["layer_percent"],
+    )
 
 
 def load_model_data(model_name: str, prefix: str, keywords):
@@ -123,15 +135,29 @@ def plot_all_models():
     plt.figure(figsize=(10, 6))
 
     for model_name, cfg in MODEL_CONFIG.items():
-        layers, iid_vals, ood_vals = load_model_data(model_name, cfg["prefix"], cfg["keywords"])
+        layers, iid_vals, ood_vals = load_model_data(
+            model_name, cfg["prefix"], cfg["keywords"]
+        )
         color = model_colors[model_name]
 
         # Plot lines
         iid_line = plt.plot(
-            layers, iid_vals, color=color, linewidth=2, linestyle="-", alpha=0.7, label=f"{model_name} IID"
+            layers,
+            iid_vals,
+            color=color,
+            linewidth=2,
+            linestyle="-",
+            alpha=0.7,
+            label=f"{model_name} IID",
         )[0]
         ood_line = plt.plot(
-            layers, ood_vals, color=color, linewidth=2, linestyle="--", alpha=0.7, label=f"{model_name} OOD"
+            layers,
+            ood_vals,
+            color=color,
+            linewidth=2,
+            linestyle="--",
+            alpha=0.7,
+            label=f"{model_name} OOD",
         )[0]
 
         # Split points into trained and untrained
@@ -139,12 +165,48 @@ def plot_all_models():
         ood_tx, ood_ty, ood_ux, ood_uy = split_points(layers, ood_vals)
 
         # IID markers: filled for trained, hollow for untrained
-        plt.scatter(iid_tx, iid_ty, color=color, marker="o", s=50, zorder=5, edgecolors=color, linewidths=1.5)
-        plt.scatter(iid_ux, iid_uy, facecolors="white", edgecolors=color, marker="o", s=50, zorder=6, linewidths=1.5)
+        plt.scatter(
+            iid_tx,
+            iid_ty,
+            color=color,
+            marker="o",
+            s=50,
+            zorder=5,
+            edgecolors=color,
+            linewidths=1.5,
+        )
+        plt.scatter(
+            iid_ux,
+            iid_uy,
+            facecolors="white",
+            edgecolors=color,
+            marker="o",
+            s=50,
+            zorder=6,
+            linewidths=1.5,
+        )
 
         # OOD markers: filled for trained, hollow for untrained
-        plt.scatter(ood_tx, ood_ty, color=color, marker="s", s=50, zorder=5, edgecolors=color, linewidths=1.5)
-        plt.scatter(ood_ux, ood_uy, facecolors="white", edgecolors=color, marker="s", s=50, zorder=6, linewidths=1.5)
+        plt.scatter(
+            ood_tx,
+            ood_ty,
+            color=color,
+            marker="s",
+            s=50,
+            zorder=5,
+            edgecolors=color,
+            linewidths=1.5,
+        )
+        plt.scatter(
+            ood_ux,
+            ood_uy,
+            facecolors="white",
+            edgecolors=color,
+            marker="s",
+            s=50,
+            zorder=6,
+            linewidths=1.5,
+        )
 
     # Add legend entries for trained/untrained distinction
     hollow_handle = plt.Line2D(
@@ -159,7 +221,14 @@ def plot_all_models():
         label="Not trained",
     )
     solid_handle = plt.Line2D(
-        [], [], color="black", marker="o", linestyle="None", markerfacecolor="black", markersize=8, label="Trained"
+        [],
+        [],
+        color="black",
+        marker="o",
+        linestyle="None",
+        markerfacecolor="black",
+        markersize=8,
+        label="Trained",
     )
 
     plt.xlabel("Layer Percent", fontsize=FONT_SIZE_Y_AXIS_LABEL)

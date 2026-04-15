@@ -92,7 +92,9 @@ def _read_json(path: Optional[str]) -> Any:
         return json.load(f)
 
 
-def _normalize_behavior_item(item: Dict[str, Any]) -> Tuple[str, str, str, str, str, str, str]:
+def _normalize_behavior_item(
+    item: Dict[str, Any],
+) -> Tuple[str, str, str, str, str, str, str]:
     """Return a 7-tuple corresponding to the unified behavior format.
 
     Order matches the original repo logic:
@@ -117,7 +119,10 @@ def _build_data_and_id_tuples(
     filter_prefixes: Sequence[str],
     train_percent: float,
     rng: random.Random,
-) -> Tuple[Dict[str, List[Tuple[str, str, str, str, str, str, str]]], List[Tuple[int, int, int]]]:
+) -> Tuple[
+    Dict[str, List[Tuple[str, str, str, str, str, str, str]]],
+    List[Tuple[int, int, int]],
+]:
     """Load one of the behavior JSON files and produce (data_by_label, id_tuples).
 
     - data_by_label: dict[label] -> list of 7-tuples behavior entries
@@ -198,7 +203,9 @@ class LatentQADatasetSimple:
 
     def __init__(
         self,
-        data_groups: Sequence[Dict[str, List[Tuple[str, str, str, str, str, str, str]]]],
+        data_groups: Sequence[
+            Dict[str, List[Tuple[str, str, str, str, str, str, str]]]
+        ],
         id_groups: Sequence[List[Tuple[int, int, int]]],
         qa_data: Dict[str, List[List[str]]],
         *,
@@ -213,7 +220,9 @@ class LatentQADatasetSimple:
         self.add_thought_tokens = add_thought_tokens
 
         # Store labels list per group to enable index-to-label mapping
-        self.labels_per_group: List[List[str]] = [list(d.keys()) for d in self.data_groups]
+        self.labels_per_group: List[List[str]] = [
+            list(d.keys()) for d in self.data_groups
+        ]
 
         # Build a flat index mapping for simplicity
         # Each entry is (group_idx, label_idx, data_idx, qa_idx)
@@ -336,14 +345,23 @@ def load_latentqa_dataset(
 
     qa_data = _read_json(paths.qa)
     if not isinstance(qa_data, dict):
-        raise ValueError("QA file must be a dict of label -> list[[question, answer], ...]")
+        raise ValueError(
+            "QA file must be a dict of label -> list[[question, answer], ...]"
+        )
 
     # Build groups in the canonical order used elsewhere
     data_groups: List[Dict[str, List[Tuple[str, str, str, str, str, str, str]]]] = []
     id_groups: List[List[Tuple[int, int, int]]] = []
 
-    for path in (paths.system, paths.stimulus_completion, paths.stimulus, paths.control):
-        data_by_label, id_tuples = _build_data_and_id_tuples(path, qa_data, filter_prefixes, train_percent, rng)
+    for path in (
+        paths.system,
+        paths.stimulus_completion,
+        paths.stimulus,
+        paths.control,
+    ):
+        data_by_label, id_tuples = _build_data_and_id_tuples(
+            path, qa_data, filter_prefixes, train_percent, rng
+        )
         data_groups.append(data_by_label)
         id_groups.append(id_tuples)
 
@@ -378,8 +396,12 @@ def preview_dataset(
             continue
         roles = [turn["role"] for turn in sample["dialog"]]
         read_roles = [turn["role"] for turn in sample["read_prompt"]]
-        read_excerpt = sample["read_prompt"][0]["content"][:120] if sample["read_prompt"] else ""
-        print(f"\n\n\n=== IDX {i} | label={sample['label']} | source={src} | mask={sample['mask_type']} ===")
+        read_excerpt = (
+            sample["read_prompt"][0]["content"][:120] if sample["read_prompt"] else ""
+        )
+        print(
+            f"\n\n\n=== IDX {i} | label={sample['label']} | source={src} | mask={sample['mask_type']} ==="
+        )
         print(f"read_prompt[0][:120]: {read_excerpt}")
         print(f"dialog roles: {roles}")
         print(f"read_roles: {read_roles}")

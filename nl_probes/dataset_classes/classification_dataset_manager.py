@@ -53,7 +53,17 @@ class MdGenderDatasetLoader(DatasetLoader):
         super().__init__(self.__class__.GROUP_NAME, self.__class__.DATASET_NAME)
 
     def load(self, num_qa_per_sample: int):
-        dataset = load_dataset("facebook/md_gender_bias", name="funpedia", trust_remote_code=True)
+        # Load funpedia config directly from its parquet files on the Hub.
+        # The legacy loading-script path is no longer supported by datasets>=3.
+        dataset = load_dataset(
+            "facebook/md_gender_bias",
+            data_files={
+                "train": "funpedia/train/*.parquet",
+                "validation": "funpedia/validation/*.parquet",
+                "test": "funpedia/test/*.parquet",
+            },
+            revision="refs/convert/parquet",
+        )
         all_examples = []
         female_count = 0
         for split in ("train", "validation", "test"):
@@ -168,7 +178,9 @@ class AgNewsDatasetLoader(DatasetLoader):
                 questions = []
                 answers = []
 
-                paraphrases = random.sample(self.question_paraphrases, num_qa_per_sample)
+                paraphrases = random.sample(
+                    self.question_paraphrases, num_qa_per_sample
+                )
                 for paraphrase in paraphrases:
                     incorrect_label = random.choice(list(labels - {correct_label}))
                     question_label = random.choice((correct_label, incorrect_label))
@@ -196,7 +208,9 @@ class NerDatasetLoader(DatasetLoader):
     def __init__(self):
         super().__init__(self.__class__.GROUP_NAME, self.__class__.DATASET_NAME)
 
-    def _get_qa_for_sentence(self, sentence, sentence_entities, all_entities, num_qa_per_sample):
+    def _get_qa_for_sentence(
+        self, sentence, sentence_entities, all_entities, num_qa_per_sample
+    ):
         context = " ".join(sentence)
         questions = []
         answers = []
@@ -223,7 +237,9 @@ class NerDatasetLoader(DatasetLoader):
         all_sentences = []
         all_entities = set()
         print("Reading NER dataset")
-        with open(os.path.join(self.DATA_FILES_PATH, "ner.csv"), encoding="unicode_escape") as f:
+        with open(
+            os.path.join(self.DATA_FILES_PATH, "ner.csv"), encoding="unicode_escape"
+        ) as f:
             reader = csv.DictReader(f)
             current_sentence = []
             sentence_entities = []
@@ -267,7 +283,9 @@ class NerDatasetLoader(DatasetLoader):
             if len(sentence_entities) == 0:
                 continue
             examples.append(
-                self._get_qa_for_sentence(sentence, sentence_entities, list(all_entities), num_qa_per_sample)
+                self._get_qa_for_sentence(
+                    sentence, sentence_entities, list(all_entities), num_qa_per_sample
+                )
             )
         return examples
 
@@ -295,7 +313,9 @@ class GeometryOfTruthDatasetLoader(DatasetLoader):
             reader = csv.DictReader(f)
             for row in reader:
                 questions = []
-                paraphrases = random.sample(self.question_paraphrases, num_qa_per_sample)
+                paraphrases = random.sample(
+                    self.question_paraphrases, num_qa_per_sample
+                )
                 for paraphrase in paraphrases:
                     question = "# " + paraphrase
                     questions.append(question)
@@ -316,7 +336,11 @@ class GeometryOfTruthDatasetLoader(DatasetLoader):
     def get_all_loaders():
         loaders = []
         for name in GeometryOfTruthDatasetLoader.DATASET_NAMES:
-            loaders.append(GeometryOfTruthDatasetLoader(GeometryOfTruthDatasetLoader.GROUP_NAME, name))
+            loaders.append(
+                GeometryOfTruthDatasetLoader(
+                    GeometryOfTruthDatasetLoader.GROUP_NAME, name
+                )
+            )
         return loaders
 
 
@@ -331,12 +355,16 @@ class SstDatasetLoader(DatasetLoader):
         dataset = load_dataset("stanfordnlp/sst2")
         result = []
         for split in ("train", "validation"):
-            for sentence, label in zip(dataset[split]["sentence"], dataset[split]["label"]):
+            for sentence, label in zip(
+                dataset[split]["sentence"], dataset[split]["label"]
+            ):
                 context_label = {0: "negative", 1: "positive"}[label]
                 questions = []
                 answers = []
                 paraphrases = {
-                    label: random.sample(self.question_paraphrases[label], num_qa_per_sample)
+                    label: random.sample(
+                        self.question_paraphrases[label], num_qa_per_sample
+                    )
                     for label in ("positive", "negative")
                 }
                 for i in range(num_qa_per_sample):
@@ -373,7 +401,9 @@ class RelationDatasetLoader(DatasetLoader):
 
     def load(self, num_qa_per_sample: int):
         relation_type, relation_name = self.name.split("/")
-        file_path = os.path.join(self.DATA_FILES_PATH, relation_type, f"{relation_name}.json")
+        file_path = os.path.join(
+            self.DATA_FILES_PATH, relation_type, f"{relation_name}.json"
+        )
         if not os.path.exists(file_path):
             logger.error(f"File not found: {file_path}")
             return []
@@ -410,7 +440,9 @@ class RelationDatasetLoader(DatasetLoader):
     def get_all_loaders():
         loaders = []
         for name in RelationDatasetLoader.DATASET_NAMES:
-            loaders.append(RelationDatasetLoader(RelationDatasetLoader.GROUP_NAME, name))
+            loaders.append(
+                RelationDatasetLoader(RelationDatasetLoader.GROUP_NAME, name)
+            )
         return loaders
 
 
@@ -439,7 +471,9 @@ class TenseDatasetLoader(DatasetLoader):
                 if ans == YES_TOKEN:
                     questions.append(ques.format(correct_label))
                 else:
-                    incorrect_label = random.choice(list(class_labels - {correct_label}))
+                    incorrect_label = random.choice(
+                        list(class_labels - {correct_label})
+                    )
                     questions.append(ques.format(incorrect_label))
 
             context_qa.append(
@@ -457,7 +491,9 @@ class TenseDatasetLoader(DatasetLoader):
 class SingularPluralDatasetLoader(DatasetLoader):
     GROUP_NAME = "singular_plural"
     DATASET_NAME = "singular_plural"
-    DATASET_PATH = os.path.join(DEFAULT_DATA_DIR, "singular_plural", "singular_plural.csv")
+    DATASET_PATH = os.path.join(
+        DEFAULT_DATA_DIR, "singular_plural", "singular_plural.csv"
+    )
 
     def __init__(self):
         super().__init__(self.__class__.GROUP_NAME, self.__class__.DATASET_NAME)
@@ -479,11 +515,17 @@ class SingularPluralDatasetLoader(DatasetLoader):
                 answers.append(ans)
                 if ans == YES_TOKEN:
                     questions.append(
-                        "# " + random.choice(self.question_paraphrases[correct_label]).format(correct_label)
+                        "# "
+                        + random.choice(
+                            self.question_paraphrases[correct_label]
+                        ).format(correct_label)
                     )
                 else:
                     questions.append(
-                        "# " + random.choice(self.question_paraphrases[incorrect_label]).format(incorrect_label)
+                        "# "
+                        + random.choice(
+                            self.question_paraphrases[incorrect_label]
+                        ).format(incorrect_label)
                     )
 
             context_qa.append(
@@ -593,7 +635,9 @@ class EngelsDatasetLoader(DatasetLoader):
 
     @staticmethod
     def get_all_loaders():
-        return [EngelsDatasetLoader(name) for name in EngelsDatasetLoader.DATASET_CONFIGS]
+        return [
+            EngelsDatasetLoader(name) for name in EngelsDatasetLoader.DATASET_CONFIGS
+        ]
 
 
 class BaseEngelsCsvBinaryLoader(DatasetLoader):
@@ -608,7 +652,9 @@ class BaseEngelsCsvBinaryLoader(DatasetLoader):
         self.group = self.__class__.GROUP_NAME
         self.name = self.__class__.DATASET_NAME
         with open(os.path.join(DEFAULT_DATA_DIR, "paraphrases/question.json")) as f:
-            self.question_paraphrases = json.load(f)["engels"][self.__class__.DATASET_NAME]
+            self.question_paraphrases = json.load(f)["engels"][
+                self.__class__.DATASET_NAME
+            ]
 
     def load(self, num_qa_per_sample: int) -> list[ContextQASample]:
         df = pd.read_csv(os.path.join(self.DATA_FILES_PATH, self.__class__.FILE_NAME))
@@ -633,7 +679,8 @@ class BaseEngelsCsvBinaryLoader(DatasetLoader):
                 else:
                     q_label = random.choice(list(class_labels - {correct_label}))
                 questions.append(
-                    "# " + random.choice(self.question_paraphrases[q_label]).format(q_label)
+                    "# "
+                    + random.choice(self.question_paraphrases[q_label]).format(q_label)
                 )
 
             context_qa.append(
@@ -717,6 +764,7 @@ class EngelsWikidataIsResearcherLoader(BaseEngelsCsvBinaryLoader):
     FILE_NAME = "64_wikidata_occupation_isresearcher.csv"
     LABELS = ("researcher", "not_researcher")
 
+
 class LanguageIDDatasetLoader(DatasetLoader):
     GROUP_NAME = "language_identification"
     DATASET_NAME = "language_identification"
@@ -740,7 +788,9 @@ class LanguageIDDatasetLoader(DatasetLoader):
                 if ans == YES_TOKEN:
                     questions.append(ques.format(correct_label))
                 else:
-                    incorrect_label = random.choice(list(class_labels - {correct_label}))
+                    incorrect_label = random.choice(
+                        list(class_labels - {correct_label})
+                    )
                     questions.append(ques.format(incorrect_label))
 
             context_qa.append(
@@ -802,7 +852,9 @@ class DatasetManager:
         result = []
         for proportion in proportions:
             end = start + math.ceil(proportion * len(self.examples))
-            result.append(DatasetManager(self.examples[start:end], self.batch_size, shuffle=False))
+            result.append(
+                DatasetManager(self.examples[start:end], self.batch_size, shuffle=False)
+            )
             start = end
         return result
 
@@ -826,7 +878,9 @@ class DatasetManager:
         datasets = DatasetManager.list_datasets_by_group(group)
         names = datasets[group]
 
-        return DatasetManager.from_named_datasets(zip([group] * len(names), names), **kwargs)
+        return DatasetManager.from_named_datasets(
+            zip([group] * len(names), names), **kwargs
+        )
 
     @staticmethod
     def list_datasets_by_group(want_group=None):
@@ -840,7 +894,9 @@ class DatasetManager:
         return result
 
 
-def get_samples_from_groups(group_names: list[str], num_qa_per_sample: int) -> list[ContextQASample]:
+def get_samples_from_groups(
+    group_names: list[str], num_qa_per_sample: int
+) -> list[ContextQASample]:
     """
     Get all ContextQASample objects from specified groups.
 
