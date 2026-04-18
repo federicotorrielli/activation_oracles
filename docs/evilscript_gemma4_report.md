@@ -21,7 +21,12 @@ public Gemma 4 lineup: `E2B-it`, `E4B-it`, `26B-A4B-it`, and `31B-it`. We
 describe each failure mode we observed, the corresponding fix, and the design
 tradeoffs. We then summarise the resulting artifact release — four final
 oracle adapters with 12 intermediate checkpoints each, plus 42 taboo
-target-model adapters.
+target-model adapters — and report training-loss and
+10-dataset classification-eval trajectories for all four runs. Final
+cross-dataset mean accuracy scales monotonically with active-parameter
+count (0.715 / 0.794 / 0.797 / 0.890 for `E2B`, `E4B`, `26B-A4B`, `31B`
+respectively), with the MoE `26B-A4B` run matching dense `E4B` despite
+its attention-only LoRA.
 
 We argue that these adaptations are not mere "model-name swaps": they
 generalise to a broader class of present-day open-weight models that blur the
@@ -484,9 +489,141 @@ gold, leaf`.
 
 ---
 
-## 6. Reproducibility and Audit Trail
+## 6. Training and Evaluation Results
 
-### 6.1 Entry points
+We report training-loss curves, per-dataset eval-accuracy trajectories
+and final-step cross-dataset accuracy for all four oracle runs. Metrics
+were pulled from Weights & Biases project `diunito/sae_introspection`
+(run IDs: `j6h100s3`, `tvbhk697`, `gbfhg6ts`, `ihrambdz`). The raw
+CSV/JSON data and the plotting script are committed under
+`docs/data/` and `utility_scripts/plot_gemma4_evals.py` so every
+number in this section can be regenerated.
+
+### 6.1 Run statistics
+
+All four runs executed the same configuration (64 047 optimizer steps,
+1 024 752 pre-shard training examples, three-depth activation injection
+at 25/50/75 %, `lora_r=64`, `lora_alpha=128`) on the same hardware. The
+only deliberately-varied factor is the per-family LoRA target set
+(§4.4) and — for the MoE run — the attention-only restriction.
+
+| Model               | Wall-clock | Tokens / epoch | Final train loss (last step) | Mean eval acc. | Min / Max dataset acc. |
+|---|---:|---:|---:|---:|---:|
+| `gemma-4-E2B-it`     |  6.35 h | 64.10 M | 1.795 | **0.715** | 0.525 / 0.841 |
+| `gemma-4-E4B-it`     |  8.78 h | 64.45 M | 0.106 | **0.794** | 0.603 / 0.943 |
+| `gemma-4-26B-A4B-it` |  8.15 h | 64.20 M | 1.740 | **0.797** | 0.587 / 0.931 |
+| `gemma-4-31B-it`     | 24.53 h | 64.54 M | 0.053 | **0.890** | 0.765 / 0.976 |
+
+Note that `final train loss` in the table is the *single last logged
+step*, which for the smaller models fell on a high-variance minibatch;
+the smoothed trajectories in Figure 1 tell the actual convergence
+story. Across all four runs the evaluator's *format-correct* rate is
+1.00 on every dataset, confirming that the
+`manual_gemma4_assistant_mask()` boundary scan and the
+`dataset_text_field="text"` bypass (both §4.5) together yield well-formed
+structured outputs — i.e. none of the accuracy drops below are
+attributable to the oracle emitting free-form text instead of the
+expected classification labels.
+
+### 6.2 Training-loss trajectories
+
+![Figure 1: Training-loss curves (400-step EMA, log-y).](figures/train_loss_curves.png)
+
+The dense runs converge smoothly: `E4B-it` crosses below 0.5 nats by
+~step 10 000 and plateaus near 0.1; `31B-it` reaches 0.05 by the end of
+training. The MoE run (`26B-A4B-it`) and the smallest dense run
+(`E2B-it`) both exhibit visibly noisier loss and higher final absolute
+values. For `26B-A4B-it` this is consistent with the
+attention-only LoRA targeting we forced to avoid the
+`Gemma4ClippableLinear` PEFT failure (F1 in §3): the adapter has
+strictly fewer degrees of freedom than on the dense variants, so
+end-of-training train loss is expected to saturate earlier. For
+`E2B-it` the interpretation is simply capacity-bound — the 2 B-equivalent
+oracle has the hardest job memorising a 1 M-example mixture.
+
+### 6.3 Cross-dataset accuracy trajectories
+
+![Figure 2: Mean eval accuracy over training steps, averaged across 10 classification datasets.](figures/eval_trajectory_summary.png)
+
+![Figure 3: Per-dataset eval accuracy trajectories.](figures/eval_accuracy_curves.png)
+
+Figure 2 shows the cross-dataset mean eval accuracy per model, logged
+every ~8 000 steps. All four models improve monotonically between
+step 0 and step ~40 000 and then flatten. The ordering by mean accuracy
+matches the ordering by active-parameter count: E2B < E4B ≈ 26B-A4B <
+31B. Notably, the MoE `26B-A4B` run matches the dense `E4B` run on
+cross-dataset mean accuracy (0.797 vs 0.794) despite (a) roughly 6×
+the total-parameter footprint and (b) the attention-only LoRA
+restriction — consistent with the interpretation that a Gemma 4 MoE at
+~4 B active parameters is, for this interpretability task, effectively
+a 4 B-active dense model plus expert routing, *and* that the
+attention-only LoRA is not leaving significant accuracy on the table
+for this base. We do not read this as evidence that
+`all-linear` would hurt the MoE — only that attention-only is not
+visibly worse at the aggregate level.
+
+Figure 3 shows per-dataset trajectories. Two patterns stand out:
+
+1. *Saturating tasks.* `tense` and `geometry_of_truth` saturate near
+   0.93–0.98 within the first 10 000 steps for all models: the
+   oracle learns to read tense and truth-valence markers off
+   activations early.
+2. *Hardest task.* `language_identification` remains the weakest
+   dataset for every model at the final step (0.525 for E2B,
+   0.809 for 31B). This is the task most likely to require the
+   oracle to recognise a *distribution of scripts and token
+   fingerprints* rather than a single learned feature, and the one
+   where the 31B run's extra capacity is most visibly recovered.
+
+### 6.4 Final-step per-model, per-dataset accuracy
+
+![Figure 4: Final eval-accuracy heatmap (model × dataset).](figures/final_eval_heatmap.png)
+
+![Figure 5: Final eval accuracy per dataset, grouped by model.](figures/final_eval_bars.png)
+
+The heatmap (Figure 4) and grouped bar chart (Figure 5) give the
+final-step numbers underlying the per-model summary in §6.1. Per-dataset
+observations:
+
+- **`tense`** (0.84–0.98) is the strongest dataset across the board — a
+  useful sanity signal that the basic "read-off" capability is intact
+  under all four ports.
+- **`language_identification`** (0.53–0.81) is the weakest across the
+  board. The gap between `E2B` (0.53) and `31B` (0.81) is the largest
+  per-dataset gap in the entire matrix — capacity-sensitive in a way
+  that most other classification tasks are not.
+- **`singular_plural`** shows a non-monotone ordering (0.56 / 0.77 /
+  0.73 / 0.77): `E4B` matches `31B`, and `26B-A4B` loses a little on
+  this narrowly-lexical feature. This is the one dataset where the MoE
+  run is visibly below the dense 4 B run.
+- **`ag_news`** is where the 26B-A4B MoE most clearly *exceeds* the
+  dense E4B (0.832 vs 0.708, a +0.12 gap), and it is this single
+  dataset that lets the MoE take the cross-dataset-mean lead despite
+  losing on `singular_plural`. On `ner` and `snli` the MoE also edges
+  E4B by small margins (+0.01 / +0.02), while it is slightly below
+  E4B on `relations` (0.665 vs 0.695), `sst2` (0.807 vs 0.825), and
+  `geometry_of_truth` (0.829 vs 0.841).
+- **`31B-it`** sweeps or ties every dataset except `singular_plural`,
+  where it is two tenths of a point behind `E4B`. The uniformity of its
+  wins matches the "capacity dominates" narrative of §6.3.
+
+### 6.5 What these numbers do and do not claim
+
+These results establish that the patched pipeline *trains and
+evaluates* on Gemma 4 without silent F1–F7 regressions, and that the
+resulting oracles occupy sensible positions on a capacity-vs-accuracy
+curve. They do **not** establish: (i) a head-to-head comparison
+against the upstream Gemma 2/3 oracles on the same evaluation
+protocol, (ii) an ablation of attention-only vs full-linear LoRA on
+the MoE, or (iii) a downstream benchmark on taboo, persona or SSC
+tasks. Each of those is a natural follow-up and is discussed as scope
+in §8.3.
+
+---
+
+## 7. Reproducibility and Audit Trail
+
+### 7.1 Entry points
 
 - `nl_probes/sft.py` — main oracle trainer. Launched with
   `torchrun --nproc_per_node=<N> nl_probes/sft.py`. Applies
@@ -496,7 +633,7 @@ gold, leaf`.
   Also applies `_patch_gemma4()` at import time. Iterates over 4 Gemma 4
   bases × 21 taboo words.
 
-### 6.2 Configuration surface
+### 7.2 Configuration surface
 
 - `nl_probes/configs/sft_config.py` — `SelfInterpTrainingConfig`.
   Notable Gemma-era fields:
@@ -509,7 +646,7 @@ gold, leaf`.
 - `MODEL_NAME_TO_BATCH_SIZE` in `taboo_train.py` — per-model batch sizes
   for the taboo path; Gemma 4 entries added here.
 
-### 6.3 Tests
+### 7.3 Tests
 
 - `tests/test_layer_counts.py` — parametrised pytest over
   `get_layer_count(model_name)`. Includes explicit entries for every
@@ -517,7 +654,7 @@ gold, leaf`.
 - `tests/test_peft.py` — smoke test for LoRA targeting. Not
   Gemma 4–specific but useful for catching F1-class regressions.
 
-### 6.4 How to tell a patched run from an unpatched run
+### 7.4 How to tell a patched run from an unpatched run
 
 At training startup, a patched run prints:
 
@@ -528,7 +665,7 @@ Applied Gemma 4 patches (ClippableLinear + mm_token_type_ids)
 If this line is absent on a Gemma 4 run, the training is running against
 an unpatched Transformers install and will hit F1/F2 on step 1.
 
-### 6.5 Sources of non-determinism we did *not* eliminate
+### 7.5 Sources of non-determinism we did *not* eliminate
 
 - Distributed training with NCCL backend is non-deterministic by default.
 - `hf_transfer` can reorder uploaded shards, which changes the SHA of
@@ -538,9 +675,9 @@ an unpatched Transformers install and will hit F1/F2 on step 1.
 
 ---
 
-## 7. Discussion
+## 8. Discussion
 
-### 7.1 Are these patches "just a model-name swap"?
+### 8.1 Are these patches "just a model-name swap"?
 
 No. Of the seven failure modes in Section 3, only F3 is model-name
 sensitive; the other six require either non-trivial code changes or a
@@ -549,7 +686,7 @@ deeper understanding of where the new family diverges from the Gemma
 silent-but-wrong behaviour rather than a visible crash, which is the
 failure mode most likely to slip past a casual port attempt.
 
-### 7.2 Generalising to future VLM-first families
+### 8.2 Generalising to future VLM-first families
 
 We expect the pattern "every text-only fine-tune is a VLM at heart" to
 recur. A generalised interpretability codebase should therefore:
@@ -566,7 +703,7 @@ The present patch set does each of these ad-hoc for Gemma 3 and 4. A
 cleaner future refactor would lift them into a small "model adapter
 registry" abstraction.
 
-### 7.3 Scope limitations
+### 8.3 Scope limitations
 
 This report covers only the *engineering* adaptation of the training
 pipeline to Gemma 4. It does not attempt to:
@@ -580,7 +717,7 @@ pipeline to Gemma 4. It does not attempt to:
 Each of these would be natural follow-ups and would likely support a
 full workshop paper on their own.
 
-### 7.4 Ethical considerations
+### 8.4 Ethical considerations
 
 The taboo target-model adapters encode a "secret word" behaviour that is
 deliberately steganographic: it is meant to be recoverable by an oracle,
@@ -590,7 +727,7 @@ note that these LoRAs are not general-purpose assistants.
 
 ---
 
-## 8. Conclusion
+## 9. Conclusion
 
 Porting Activation Oracles to Gemma 4 surfaced a small but
 non-trivial set of interactions between Google's multimodal-first
