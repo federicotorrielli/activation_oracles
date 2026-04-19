@@ -5,20 +5,18 @@ os.environ["PYTORCH_CUDA_ALLOC_CONF"] = "expandable_segments:True"
 import gc
 import itertools
 from dataclasses import dataclass
-from functools import lru_cache
 from pathlib import Path
-from typing import Any, Dict, List, Optional
+from typing import Any, Callable
 
 import torch
 from config import CustomLoraConfig, CustomSFTConfig, EvalConfig
-from peft import LoraConfig, PeftModel, get_peft_model, prepare_model_for_kbit_training
-from tqdm import tqdm
+from peft import PeftModel, get_peft_model
 from transformers import AutoModelForCausalLM, AutoTokenizer, BitsAndBytesConfig
 from transformers.trainer_callback import EarlyStoppingCallback, TrainerCallback
-from trl import GRPOConfig, GRPOTrainer, SFTConfig, SFTTrainer
+from trl import SFTConfig, SFTTrainer
 
 import wandb
-from datasets import Dataset, DatasetDict, load_dataset, load_from_disk
+from datasets import Dataset, load_dataset
 
 
 def _patch_gemma4():
@@ -128,6 +126,61 @@ def print_trainable_parameters(model) -> None:
         print(f"  LoRA trainable subset: {lora_trainable:,}")
 
 
+@dataclass
+class AssistantOnlyDataCollator:
+    pad_token_id: int
+
+    def __call__(self, features: list[dict[str, Any]]) -> dict[str, torch.Tensor]:
+        batch_size = len(features)
+        max_len = max(len(feature["input_ids"]) for feature in features)
+
+        input_ids = torch.full(
+            (batch_size, max_len), self.pad_token_id, dtype=torch.long
+        )
+        labels = torch.full((batch_size, max_len), -100, dtype=torch.long)
+        attention_mask = torch.zeros((batch_size, max_len), dtype=torch.long)
+
+        has_token_type_ids = "token_type_ids" in features[0]
+        has_mm_token_type_ids = "mm_token_type_ids" in features[0]
+
+        if has_token_type_ids:
+            token_type_ids = torch.zeros((batch_size, max_len), dtype=torch.long)
+        if has_mm_token_type_ids:
+            mm_token_type_ids = torch.zeros((batch_size, max_len), dtype=torch.long)
+
+        for idx, feature in enumerate(features):
+            ids = torch.as_tensor(feature["input_ids"], dtype=torch.long)
+            assistant_mask = torch.as_tensor(
+                feature["assistant_masks"], dtype=torch.long
+            )
+            seq_len = ids.shape[0]
+
+            input_ids[idx, :seq_len] = ids
+            attention_mask[idx, :seq_len] = 1
+            labels[idx, :seq_len] = ids
+            labels[idx, :seq_len][assistant_mask == 0] = -100
+
+            if has_token_type_ids:
+                token_type_ids[idx, :seq_len] = torch.as_tensor(
+                    feature["token_type_ids"], dtype=torch.long
+                )
+            if has_mm_token_type_ids:
+                mm_token_type_ids[idx, :seq_len] = torch.as_tensor(
+                    feature["mm_token_type_ids"], dtype=torch.long
+                )
+
+        batch = {
+            "input_ids": input_ids,
+            "labels": labels,
+            "attention_mask": attention_mask,
+        }
+        if has_token_type_ids:
+            batch["token_type_ids"] = token_type_ids
+        if has_mm_token_type_ids:
+            batch["mm_token_type_ids"] = mm_token_type_ids
+        return batch
+
+
 def train_with_sft_only(
     sft_train_ds: Dataset,
     sft_hf_eval_test_ds: Dataset,
@@ -139,6 +192,8 @@ def train_with_sft_only(
     save_lora_path: Path | None = None,
     load_lora_path: Path | None = None,
     quantize: bool = False,
+    data_collator: Callable[[list[dict[str, Any]]], dict[str, torch.Tensor]]
+    | None = None,
 ) -> None:
     torch.manual_seed(config.random_seed)
 
@@ -201,6 +256,8 @@ def train_with_sft_only(
         train_dataset=sft_train_ds,
         eval_dataset=sft_hf_eval_test_ds,
         args=sft_config,
+        data_collator=data_collator,
+        processing_class=tokenizer,
         callbacks=callbacks,
     )
 
@@ -342,16 +399,19 @@ def manual_qwen3_assistant_mask(
     }
 
 
-def manual_gemma4_assistant_mask(
+def manual_gemma_assistant_mask(
     messages: list[dict[str, str]],
     tokenizer: AutoTokenizer,
     final_message_loss_only: bool = False,
+    include_multimodal_token_types: bool = False,
 ) -> dict[str, torch.Tensor]:
     """
-    Create assistant-token mask for Gemma 4 chat format.
+    Create assistant-token mask for Gemma-family chat formats.
 
     Gemma 4 uses:
       <|turn>model\n  ... content ...  <turn|>\n
+    Gemma 2/3 use:
+      <start_of_turn>model\n ... content ... <end_of_turn>\n
     """
     input_ids = tokenizer.apply_chat_template(
         messages,
@@ -359,11 +419,20 @@ def manual_gemma4_assistant_mask(
         return_tensors="pt",
         add_generation_prompt=False,
         return_dict=False,
+        enable_thinking=False,
     )
 
-    # Identify the marker token IDs for Gemma 4
-    begin_turn_ids = tokenizer.encode("<|turn>model\n", add_special_tokens=False)
-    end_turn_ids = tokenizer.encode("<turn|>", add_special_tokens=False)
+    chat_template = tokenizer.chat_template or ""
+    if "<|turn>" in chat_template:
+        begin_turn_ids = tokenizer.encode("<|turn>model\n", add_special_tokens=False)
+        end_turn_ids = tokenizer.encode("<turn|>", add_special_tokens=False)
+    elif "<start_of_turn>" in chat_template:
+        begin_turn_ids = tokenizer.encode(
+            "<start_of_turn>model\n", add_special_tokens=False
+        )
+        end_turn_ids = tokenizer.encode("<end_of_turn>", add_special_tokens=False)
+    else:
+        raise ValueError("Unsupported Gemma chat template")
 
     assistant_mask = torch.zeros_like(input_ids)
 
@@ -382,7 +451,7 @@ def manual_gemma4_assistant_mask(
                 j = content_start
                 while j < seq_len:
                     if sequence[j : j + len(end_turn_ids)] == end_turn_ids:
-                        spans.append((content_start, j))
+                        spans.append((content_start, j + len(end_turn_ids)))
                         i = j + len(end_turn_ids)
                         break
                     j += 1
@@ -402,18 +471,17 @@ def manual_gemma4_assistant_mask(
             for start, end in spans:
                 assistant_mask[batch_idx, start:end] = 1
 
-    # Gemma 4 requires both token_type_ids and mm_token_type_ids during training,
-    # even for text-only inputs. All zeros = text tokens.
-    # See: https://github.com/huggingface/transformers/issues/45200
-    token_type_ids = torch.zeros_like(input_ids)
-    mm_token_type_ids = torch.zeros_like(input_ids)
-
-    return {
+    result = {
         "input_ids": input_ids.squeeze(0),
         "assistant_masks": assistant_mask.squeeze(0),
-        "token_type_ids": token_type_ids.squeeze(0),
-        "mm_token_type_ids": mm_token_type_ids.squeeze(0),
     }
+    if include_multimodal_token_types:
+        # Gemma 4 requires both token_type_ids and mm_token_type_ids during training,
+        # even for text-only inputs. All zeros = text tokens.
+        # See: https://github.com/huggingface/transformers/issues/45200
+        result["token_type_ids"] = torch.zeros_like(input_ids).squeeze(0)
+        result["mm_token_type_ids"] = torch.zeros_like(input_ids).squeeze(0)
+    return result
 
 
 def prepare_sft_dataset(
@@ -423,9 +491,26 @@ def prepare_sft_dataset(
     model_name: str = "",
 ) -> Dataset:
     remove_cols = [c for c in dataset.column_names if c not in {"messages"}]
+    model_name_lower = model_name.lower()
 
-    if "gemma" in model_name.lower():
-        mask_fn = manual_gemma4_assistant_mask
+    if "gemma-4" in model_name_lower:
+
+        def mask_fn(messages, tokenizer, final_message_loss_only):
+            return manual_gemma_assistant_mask(
+                messages,
+                tokenizer,
+                final_message_loss_only,
+                include_multimodal_token_types=True,
+            )
+    elif "gemma" in model_name_lower:
+
+        def mask_fn(messages, tokenizer, final_message_loss_only):
+            return manual_gemma_assistant_mask(
+                messages,
+                tokenizer,
+                final_message_loss_only,
+                include_multimodal_token_types=False,
+            )
     else:
         mask_fn = manual_qwen3_assistant_mask
 
@@ -549,7 +634,7 @@ def combine_with_ultrachat(
             if len(kept_examples) >= num_train_examples:
                 break
 
-    print(f"\n=== FILTERING STATS ===")
+    print("\n=== FILTERING STATS ===")
     print(f"Total examples examined: {total_seen}")
     print(f"Examples kept: {len(kept_examples)}")
     print(f"Examples filtered out: {total_seen - len(kept_examples)}")
@@ -602,7 +687,8 @@ def push_taboo_lora_to_hf(
     upload_folder(
         folder_path=str(lora_path),
         repo_id=repo_id,
-        commit_message=f"Upload taboo LoRA adapter ({taboo_word})",
+        commit_message=f"Overwrite taboo LoRA adapter ({taboo_word})",
+        delete_patterns="*",
     )
 
     # Copy config.json from the base model
@@ -763,8 +849,6 @@ if __name__ == "__main__":
 
     final_message_loss_only = True
 
-    from huggingface_hub import repo_exists
-
     for model_name, dataset_name in itertools.product(model_names, dataset_names):
         taboo_word = dataset_name.split("-")[
             -1
@@ -780,11 +864,6 @@ if __name__ == "__main__":
         lora_name = f"{model_short}-{dataset_name.split('/')[-1]}"
         lora_name = lora_name.replace(" ", "_").replace(".", "_").replace("/", "_")
         lora_path = Path(config.model_lora_dir) / lora_name
-
-        # Skip entirely if already trained locally and pushed to HF
-        if lora_path.exists() and repo_exists(hf_repo_id):
-            print(f"Skipping {hf_repo_id} — already trained and pushed")
-            continue
 
         print(f"\n{'=' * 60}")
         print(f"Training {model_short} / taboo-{taboo_word}")
@@ -802,152 +881,77 @@ if __name__ == "__main__":
             real_batch_size=real_batch_size,
         )
         sft_config.num_train_epochs = 10.0
+        sft_config.output_dir = f"sft_outputs/{lora_name}"
+        sft_config.overwrite_output_dir = True
 
         ds = load_dataset(dataset_name, split="train")
 
         is_gemma = "gemma" in model_name.lower()
+        if final_message_loss_only and not is_gemma:
+            # Qwen3-specific workaround for multi-turn tokenization
+            old_len = len(ds)
+            ds = create_incremental_turn_dataset(ds)
+            new_len = len(ds)
+            print(f"Old length: {old_len}, New length: {new_len}")
 
-        if is_gemma:
-            # Gemma 4 approach (inspired by Unsloth):
-            # Format as plain text via apply_chat_template(tokenize=False),
-            # use dataset_text_field="text", and train_on_responses_only.
-            # This bypasses TRL's conversational processing which breaks on
-            # Gemma 4's mm_token_type_ids requirement.
-            tokenizer = AutoTokenizer.from_pretrained(
-                model_name, trust_remote_code=True
-            )
+        eval_percent = 0.1
+        train_size = int(len(ds) * (1 - eval_percent))
+        eval_size = int(len(ds) * eval_percent)
+        raw_train_ds = ds.select(range(train_size))
+        eval_ds = ds.select(range(train_size, train_size + eval_size))
 
-            def format_as_text(example):
-                text = tokenizer.apply_chat_template(
-                    example["messages"], tokenize=False, add_generation_prompt=False
-                )
-                # Remove BOS token if present — the tokenizer re-adds it during training
-                if text.startswith(tokenizer.bos_token or ""):
-                    text = text[len(tokenizer.bos_token) :]
-                return {"text": text}
+        tokenizer_kwargs = {"trust_remote_code": True} if is_gemma else {}
+        tokenizer = AutoTokenizer.from_pretrained(config.model_name, **tokenizer_kwargs)
+        if not tokenizer.pad_token:
+            tokenizer.pad_token = tokenizer.eos_token
 
-            ds = ds.map(format_as_text, remove_columns=["messages"])
+        train_ds = prepare_sft_dataset(
+            raw_train_ds,
+            tokenizer,
+            final_message_loss_only=final_message_loss_only,
+            model_name=model_name,
+        )
+        eval_ds = prepare_sft_dataset(
+            eval_ds,
+            tokenizer,
+            final_message_loss_only=final_message_loss_only,
+            model_name=model_name,
+        )
+        train_ds = combine_with_ultrachat(
+            raw_train_ds=raw_train_ds,
+            tokenized_train_ds=train_ds,
+            chat_dataset_name=chat_dataset_name,
+            tokenizer=tokenizer,
+            random_seed=config.random_seed,
+            final_message_loss_only=final_message_loss_only,
+            model_name=model_name,
+        )
 
-            # Mix with UltraChat (also as plain text)
-            eval_percent = 0.1
-            train_size = int(len(ds) * (1 - eval_percent))
-            raw_train_ds = ds.select(range(train_size))
-            eval_ds = ds.select(range(train_size, len(ds)))
+        early_stopping_callback = EarlyStoppingCallback(early_stopping_patience=2)
+        eval_frequency = len(train_ds) // (real_batch_size * 2)
+        sft_config.eval_steps = eval_frequency
+        sft_config.save_steps = eval_frequency
 
-            max_chars = max(len(ex["text"]) for ex in raw_train_ds)
-            chat_ds = load_dataset(chat_dataset_name, split="train_sft", streaming=True)
-            kept = []
-            for ex in chat_ds:
-                msgs = ex["messages"]
-                if len(msgs) < 2:
-                    continue
-                text = tokenizer.apply_chat_template(
-                    msgs, tokenize=False, add_generation_prompt=False
-                )
-                if text.startswith(tokenizer.bos_token or ""):
-                    text = text[len(tokenizer.bos_token) :]
-                if len(text) <= max_chars:
-                    kept.append({"text": text})
-                if len(kept) >= len(raw_train_ds):
-                    break
-
-            chat_dataset = Dataset.from_list(kept)
-            from datasets import concatenate_datasets
-
-            train_ds = concatenate_datasets([raw_train_ds, chat_dataset]).shuffle(
-                seed=config.random_seed
-            )
-            print(
-                f"Combined dataset: {len(train_ds)} (taboo: {len(raw_train_ds)}, ultrachat: {len(chat_dataset)})"
-            )
-
-            sft_config_gemma = CustomSFTConfig(
-                model_name=model_name,
-                batch_size=batch_size,
-                real_batch_size=real_batch_size,
-                dataset_text_field="text",
-            )
-            sft_config_gemma.num_train_epochs = 10.0
-            eval_frequency = len(train_ds) // (real_batch_size * 2)
-            sft_config_gemma.eval_steps = eval_frequency
-            sft_config_gemma.save_steps = eval_frequency
-
-            if not lora_path.exists():
-                train_with_sft_only(
-                    train_ds,
-                    eval_ds,
-                    config.wandb_project,
-                    config,
-                    sft_config_gemma,
-                    callbacks=[EarlyStoppingCallback(early_stopping_patience=2)],
-                    save_lora_path=lora_path,
-                    quantize=False,
-                )
-        else:
-            if final_message_loss_only:
-                # Qwen3-specific workaround for multi-turn tokenization
-                old_len = len(ds)
-                ds = create_incremental_turn_dataset(ds)
-                new_len = len(ds)
-                print(f"Old length: {old_len}, New length: {new_len}")
-
-            eval_percent = 0.1
-            train_size = int(len(ds) * (1 - eval_percent))
-            eval_size = int(len(ds) * eval_percent)
-            raw_train_ds = ds.select(range(train_size))
-            eval_ds = ds.select(range(train_size, train_size + eval_size))
-
-            tokenizer = AutoTokenizer.from_pretrained(config.model_name)
-            train_ds = prepare_sft_dataset(
-                raw_train_ds,
-                tokenizer,
-                final_message_loss_only=final_message_loss_only,
-                model_name=model_name,
-            )
-            eval_ds = prepare_sft_dataset(
-                eval_ds,
-                tokenizer,
-                final_message_loss_only=final_message_loss_only,
-                model_name=model_name,
-            )
-            train_ds = combine_with_ultrachat(
-                raw_train_ds=raw_train_ds,
-                tokenized_train_ds=train_ds,
-                chat_dataset_name=chat_dataset_name,
-                tokenizer=tokenizer,
-                random_seed=config.random_seed,
-                final_message_loss_only=final_message_loss_only,
-                model_name=model_name,
-            )
-
-            early_stopping_callback = EarlyStoppingCallback(early_stopping_patience=2)
-            eval_frequency = len(train_ds) // (real_batch_size * 2)
-            sft_config.eval_steps = eval_frequency
-            sft_config.save_steps = eval_frequency
-
-            if not lora_path.exists():
-                train_with_sft_only(
-                    train_ds,
-                    eval_ds,
-                    config.wandb_project,
-                    config,
-                    sft_config,
-                    callbacks=[early_stopping_callback],
-                    save_lora_path=lora_path,
-                    quantize=False,
-                )
+        train_with_sft_only(
+            train_ds,
+            eval_ds,
+            config.wandb_project,
+            config,
+            sft_config,
+            callbacks=[early_stopping_callback],
+            save_lora_path=lora_path,
+            quantize=False,
+            data_collator=AssistantOnlyDataCollator(tokenizer.pad_token_id),
+        )
 
         # Upload to HuggingFace Hub
-        if not repo_exists(hf_repo_id):
-            try:
-                push_taboo_lora_to_hf(
-                    lora_path=lora_path,
-                    model_name=model_name,
-                    dataset_name=dataset_name,
-                    taboo_word=taboo_word,
-                    repo_id=hf_repo_id,
-                )
-            except Exception as e:
-                print(f"Warning: Failed to push {hf_repo_id} to HF: {e}")
-        else:
-            print(f"{hf_repo_id} already on HF, skipping upload")
+        try:
+            push_taboo_lora_to_hf(
+                lora_path=lora_path,
+                model_name=model_name,
+                dataset_name=dataset_name,
+                taboo_word=taboo_word,
+                repo_id=hf_repo_id,
+            )
+        except Exception as e:
+            print(f"Warning: Failed to push {hf_repo_id} to HF: {e}")
