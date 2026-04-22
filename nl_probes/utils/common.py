@@ -49,9 +49,9 @@ def load_tokenizer(
     tokenizer = AutoTokenizer.from_pretrained(model_name)
     tokenizer.padding_side = "left"
 
-    if not tokenizer.pad_token_id:
+    if tokenizer.pad_token_id is None:
         tokenizer.pad_token_id = tokenizer.eos_token_id
-    if not tokenizer.bos_token_id:
+    if tokenizer.bos_token_id is None:
         tokenizer.bos_token_id = tokenizer.eos_token_id
     return tokenizer
 
