@@ -77,6 +77,7 @@ This setup was enough to produce healthy classification-style eval curves, but i
 
 ## Why A Gemma-4-Specific Trainer Exists
 
+<<<<<<< HEAD
 The current evidence suggests that Gemma 4 needs an architecture-aware entrypoint, even when the training recipe itself stays close to the original.
 
 The custom trainer in `nl_probes/gemma4_sft.py` differs from `nl_probes/sft.py` only where Gemma 4 forces it to:
@@ -108,6 +109,24 @@ The trainer now exposes a single set of defaults — the previous `qwen_exact` /
 - Bookkeeping: `save_dir=checkpoints_gemma4_custom`, `wandb_suffix=_gemma4_custom`, `hf_repo_name=activation-oracle-<model-suffix>`, `seed=42`, `window_mult=20`.
 
 These defaults are not proven optimal yet, but they keep the recipe close to the released Qwen3-8B oracle while staying honest about Gemma 4's architecture.
+||||||| 4d249a6
+=======
+The current evidence suggests that Gemma 4 needs a more architecture-aware verbalizer recipe than the original generic oracle trainer.
+
+The custom trainer in `nl_probes/gemma4_sft.py` changes the defaults in a few deliberate ways:
+
+1. It only targets Gemma 4 models.
+2. It uses explicit Gemma 4 architecture inspection before training.
+3. It defaults the injection layer to the first full-attention layer, not layer 1.
+4. It uses denser read-layer coverage by default: `10,25,40,55,70,85`.
+5. It reweights the training mixture toward transport/readout tasks:
+   - `LatentQA x2`
+   - `PastLens x2`
+   - `Classification x1`
+6. It keeps MoE LoRA attention-only by default.
+
+These defaults are not proven optimal yet, but they are more aligned with Gemma 4's actual architecture than the previous generic recipe.
+>>>>>>> 9e5d27092204639ea02a113ae080281737f47bf1
 
 ## Practical Recommendations
 

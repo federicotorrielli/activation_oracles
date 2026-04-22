@@ -4,14 +4,14 @@ from datetime import timedelta
 
 import torch
 import torch.distributed as dist
-from huggingface_hub import repo_exists, whoami as hf_whoami
+from huggingface_hub import repo_exists
+from huggingface_hub import whoami as hf_whoami
 from transformers import AutoConfig
 
 import nl_probes.sft as sft_mod
 from nl_probes.configs.sft_config import SelfInterpTrainingConfig
 from nl_probes.utils.activation_utils import get_text_only_lora_targets
 from nl_probes.utils.common import load_tokenizer
-
 
 DEFAULT_TRAIN_BATCH_SIZE = 16
 TARGET_READ_PERCENTS = [25, 50, 75]
@@ -27,7 +27,9 @@ def get_text_config(config):
 
 def full_attention_layers(text_cfg) -> list[int]:
     return [
-        idx for idx, layer_type in enumerate(text_cfg.layer_types) if layer_type == "full_attention"
+        idx
+        for idx, layer_type in enumerate(text_cfg.layer_types)
+        if layer_type == "full_attention"
     ]
 
 
@@ -254,9 +256,7 @@ def main() -> None:
         print("PLE size:", ple_size)
         print("First full-attention layer:", full_layer)
         print("Hook layer:", hook_onto_layer)
-        print(
-            "Nearest full-attention read layers for 25/50/75:", target_full_layers
-        )
+        print("Nearest full-attention read layers for 25/50/75:", target_full_layers)
         print("Read layer percents:", layer_percents)
         print("Global train batch size:", train_batch_size)
         print("LoRA target regex:", lora_targets)
